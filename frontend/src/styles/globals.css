@@ -1,0 +1,298 @@
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400&family=Inter+Tight:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap");
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  --background: 244 241 235;
+  --foreground: 29 27 36;
+  --card: 255 252 246;
+  --card-foreground: 29 27 36;
+  --popover: 255 252 246;
+  --popover-foreground: 29 27 36;
+  --muted: 229 224 216;
+  --muted-foreground: 91 87 103;
+  --border: 194 186 202;
+  --input: 188 180 198;
+  --primary: 35 31 45;
+  --primary-foreground: 255 251 244;
+  --secondary: 210 225 238;
+  --secondary-foreground: 26 42 58;
+  --accent: 111 82 185;
+  --accent-foreground: 255 251 244;
+  --destructive: 181 48 58;
+  --destructive-foreground: 255 250 250;
+  --ring: 126 97 198;
+  --ivory: 35 31 45;
+  --violet-mist: 111 82 185;
+  --icy: 80 111 143;
+  --silver: 91 87 103;
+  font-family:
+    "Inter Tight", Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+}
+
+.dark {
+  --background: 7 8 13;
+  --foreground: 245 241 232;
+  --card: 13 15 25;
+  --card-foreground: 245 241 232;
+  --popover: 13 15 25;
+  --popover-foreground: 245 241 232;
+  --muted: 26 28 42;
+  --muted-foreground: 168 171 186;
+  --border: 55 60 88;
+  --input: 55 60 88;
+  --primary: 246 241 232;
+  --primary-foreground: 15 16 22;
+  --secondary: 167 203 232;
+  --secondary-foreground: 7 13 22;
+  --accent: 119 87 186;
+  --accent-foreground: 249 246 241;
+  --destructive: 235 91 103;
+  --destructive-foreground: 40 7 11;
+  --ring: 151 123 216;
+}
+
+@theme inline {
+  --color-background: rgb(var(--background));
+  --color-foreground: rgb(var(--foreground));
+  --color-card: rgb(var(--card));
+  --color-card-foreground: rgb(var(--card-foreground));
+  --color-popover: rgb(var(--popover));
+  --color-popover-foreground: rgb(var(--popover-foreground));
+  --color-muted: rgb(var(--muted));
+  --color-muted-foreground: rgb(var(--muted-foreground));
+  --color-border: rgb(var(--border));
+  --color-input: rgb(var(--input));
+  --color-primary: rgb(var(--primary));
+  --color-primary-foreground: rgb(var(--primary-foreground));
+  --color-secondary: rgb(var(--secondary));
+  --color-secondary-foreground: rgb(var(--secondary-foreground));
+  --color-accent: rgb(var(--accent));
+  --color-accent-foreground: rgb(var(--accent-foreground));
+  --color-destructive: rgb(var(--destructive));
+  --color-destructive-foreground: rgb(var(--destructive-foreground));
+  --color-ring: rgb(var(--ring));
+  --color-ivory: rgb(var(--ivory));
+  --color-violet-mist: rgb(var(--violet-mist));
+  --color-icy: rgb(var(--icy));
+  --color-silver: rgb(var(--silver));
+  --font-display: "Fraunces", ui-serif, Georgia, serif;
+  --font-sans: "Inter Tight", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+* {
+  border-color: rgb(var(--border));
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+  width: 100%;
+  overflow-x: hidden;
+}
+
+body {
+  min-width: 0;
+  min-height: 100dvh;
+  margin: 0;
+  color: rgb(var(--foreground));
+  background:
+    radial-gradient(circle at 62% -20%, rgba(var(--violet-mist), 0.16), transparent 34rem),
+    radial-gradient(circle at 15% 18%, rgba(var(--icy), 0.12), transparent 28rem),
+    rgb(var(--background));
+  font-feature-settings: "ss01", "cv11";
+  text-rendering: optimizeLegibility;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+.app-shell {
+  position: relative;
+  isolation: isolate;
+  overflow-x: hidden;
+  color: rgb(var(--foreground));
+}
+
+.app-shell::before {
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  content: "";
+  background:
+    radial-gradient(ellipse at 72% 18%, rgba(255, 255, 255, 0.72), transparent 24rem),
+    radial-gradient(ellipse at 34% 26%, rgba(var(--icy), 0.11), transparent 26rem),
+    linear-gradient(135deg, rgba(var(--violet-mist), 0.1), transparent 38%),
+    linear-gradient(180deg, rgb(var(--background)), rgba(var(--background), 0.9));
+}
+
+.ambient-grid {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.22;
+  background-image:
+    radial-gradient(circle, rgba(var(--foreground), 0.2) 0.65px, transparent 1.2px),
+    radial-gradient(ellipse at 70% 20%, rgba(var(--silver), 0.12), transparent 34rem),
+    radial-gradient(ellipse at 36% 20%, rgba(var(--icy), 0.12), transparent 25rem);
+  background-position:
+    0 0,
+    0 0,
+    0 0;
+  background-size:
+    7px 7px,
+    100% 100%,
+    100% 100%;
+  mask-image: linear-gradient(to bottom, black, rgba(0, 0, 0, 0.88) 58%, transparent 100%);
+}
+
+.ambient-grid::after {
+  position: absolute;
+  inset: -12%;
+  content: "";
+  opacity: 0.46;
+  background:
+    radial-gradient(ellipse at 52% 30%, rgba(var(--silver), 0.2), transparent 22rem),
+    conic-gradient(from 160deg at 58% 30%, transparent, rgba(var(--ivory), 0.12), transparent 26%);
+  filter: blur(28px);
+  animation: drift 24s ease-in-out infinite;
+}
+
+.surface-card {
+  border-color: rgba(var(--border), 0.72);
+  background: rgba(var(--card), 0.72);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.12);
+  backdrop-filter: blur(22px);
+}
+
+.font-display {
+  font-family: "Fraunces", ui-serif, Georgia, serif;
+}
+
+.brand-orb {
+  border: 1px solid rgba(var(--ivory), 0.16);
+  background:
+    radial-gradient(circle at 50% 50%, rgba(var(--ivory), 0.42), transparent 34%),
+    rgba(var(--card), 0.72);
+  box-shadow:
+    inset 0 1px 0 rgba(var(--ivory), 0.16),
+    0 18px 44px rgba(var(--violet-mist), 0.22);
+  backdrop-filter: blur(18px) saturate(140%);
+}
+
+.glass-panel {
+  border: 1px solid rgba(var(--border), 0.58);
+  background:
+    linear-gradient(150deg, rgba(255, 255, 255, 0.68), rgba(255, 255, 255, 0.28) 58%, rgba(var(--violet-mist), 0.06)),
+    rgba(var(--card), 0.72);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.72),
+    0 30px 80px -38px rgba(35, 31, 45, 0.36);
+  backdrop-filter: blur(28px) saturate(140%);
+}
+
+.glass-chip {
+  border: 1px solid rgba(var(--border), 0.54);
+  background: rgba(var(--card), 0.54);
+  backdrop-filter: blur(14px);
+}
+
+.text-gradient {
+  color: rgb(var(--foreground));
+  text-shadow: 0 18px 48px rgba(var(--violet-mist), 0.18);
+}
+
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+.dark .app-shell::before {
+  background:
+    radial-gradient(ellipse at 72% 18%, rgba(var(--ivory), 0.13), transparent 22rem),
+    radial-gradient(ellipse at 34% 26%, rgba(var(--icy), 0.1), transparent 26rem),
+    linear-gradient(135deg, rgba(var(--violet-mist), 0.16), transparent 38%),
+    linear-gradient(180deg, rgb(var(--background)), rgba(var(--background), 0.88));
+}
+
+.dark .ambient-grid {
+  opacity: 0.38;
+  background-image:
+    radial-gradient(circle, rgba(var(--ivory), 0.26) 0.65px, transparent 1.2px),
+    radial-gradient(ellipse at 70% 20%, rgba(var(--silver), 0.18), transparent 34rem),
+    radial-gradient(ellipse at 36% 20%, rgba(var(--icy), 0.1), transparent 25rem);
+}
+
+.dark .surface-card {
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.42);
+}
+
+.dark .glass-panel {
+  border-color: rgba(var(--ivory), 0.1);
+  background:
+    linear-gradient(150deg, rgba(var(--ivory), 0.06), rgba(var(--ivory), 0.02) 58%, rgba(var(--violet-mist), 0.05)),
+    rgba(var(--card), 0.56);
+  box-shadow:
+    inset 0 1px 0 rgba(var(--ivory), 0.08),
+    0 30px 80px -30px rgba(0, 0, 0, 0.72);
+}
+
+.dark .glass-chip {
+  border-color: rgba(var(--ivory), 0.12);
+  background: rgba(var(--ivory), 0.06);
+}
+
+.dark .text-gradient {
+  color: rgb(225 217 255);
+  text-shadow: 0 18px 48px rgba(var(--violet-mist), 0.24);
+}
+
+.soft-enter {
+  animation: soft-enter 420ms ease both;
+}
+
+@keyframes soft-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes drift {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+
+  50% {
+    transform: translate3d(-2%, 1%, 0) scale(1.03);
+  }
+
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}

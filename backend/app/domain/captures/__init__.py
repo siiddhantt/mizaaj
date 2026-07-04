@@ -1,0 +1,1 @@
+"""Shopping evidence capture domain."""
