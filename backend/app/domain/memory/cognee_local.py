@@ -6,11 +6,11 @@ from uuid import UUID
 from app.core.config import Settings
 from app.core.errors import ProviderNotConfiguredError
 from app.domain.memory.gateway import MemoryGateway
+from app.domain.memory.recall import recall_item_to_fact
 from app.domain.memory.schemas import (
     FitMemoryEntry,
     ForgetScope,
     MemoryContext,
-    MemoryContextFact,
     RecallFitContextRequest,
 )
 
@@ -52,10 +52,7 @@ class CogneeLocalMemoryGateway(MemoryGateway):
         return MemoryContext(
             user_id=query.user_id,
             query=query.query,
-            facts=[
-                MemoryContextFact(text=str(item), source="cognee", score=None)
-                for item in results[: query.top_k]
-            ],
+            facts=[recall_item_to_fact(item, "cognee") for item in results[: query.top_k]],
         )
 
     async def forget_private(self, user_id: UUID, scope: ForgetScope) -> None:

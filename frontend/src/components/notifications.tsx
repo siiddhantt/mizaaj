@@ -31,7 +31,15 @@ export function useNotifications() {
   const notify = useCallback(
     (input: NotifyInput) => {
       const notification = { ...input, id: notificationId() }
-      setNotifications((current) => [notification, ...current].slice(0, 4))
+      setNotifications((current) => {
+        const alreadyVisible = current.some(
+          (item) =>
+            item.kind === input.kind &&
+            item.title === input.title &&
+            item.detail === input.detail,
+        )
+        return alreadyVisible ? current : [notification, ...current].slice(0, 4)
+      })
       window.setTimeout(() => dismiss(notification.id), input.kind === "error" ? 7000 : 4200)
     },
     [dismiss],
@@ -65,7 +73,7 @@ export function NotificationStack({
           <div
             key={notification.id}
             className={cn(
-              "glass-panel pointer-events-auto flex w-full items-start gap-3 rounded-[1.35rem] p-3 shadow-2xl soft-enter",
+              "notification-surface pointer-events-auto flex w-full items-start gap-3 rounded-[1.35rem] p-3 soft-enter",
               notification.kind === "error" && "border-destructive/35",
               notification.kind === "success" && "border-secondary/40",
             )}

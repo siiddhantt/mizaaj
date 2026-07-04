@@ -1,0 +1,582 @@
+{
+  "dataset_name": "mizaaj_atlas_seed_v2",
+  "version": "2026-07-04",
+  "purpose": "Curated public product evidence for Mizaaj Atlas. These records are not private user experience and must never outrank private memory.",
+  "source_policy": {
+    "privacy": "No private user facts belong in Atlas.",
+    "priority": "Private Mizaaj memory outranks Atlas whenever they conflict.",
+    "allowed_content": "Source facts from public product pages, size guides, and non-personal interpretation rules derived from those facts.",
+    "blocked_content": "Demo prompts, user taste assumptions, unverified reviews, affiliate claims, and personal preference statements."
+  },
+  "records": [
+    {
+      "id": "hm_oversized_cotton_tshirt_1331624002",
+      "kind": "product",
+      "identity": {
+        "brand": "H&M",
+        "retailer": "H&M",
+        "title": "Oversized Cotton T-Shirt",
+        "category": "tshirt",
+        "gender": "men",
+        "style_number": "1331624002",
+        "color": "Black",
+        "canonical_url": "https://www2.hm.com/en_us/productpage.1331624002.html",
+        "region": "US"
+      },
+      "source_facts": [
+        {"field": "fit", "value": "Oversized", "evidence": "Product page fit label."},
+        {"field": "style", "value": "Boxy", "evidence": "Product page style label."},
+        {"field": "construction", "value": "Dropped shoulders", "evidence": "Product description."},
+        {"field": "construction", "value": "Ribbed round neck", "evidence": "Product description."},
+        {"field": "fabric", "value": "Cotton jersey", "evidence": "Product page composition/material."},
+        {"field": "composition", "value": "Cotton 100%", "evidence": "Product page composition."},
+        {"field": "length", "value": "Regular length", "evidence": "Product page length label."}
+      ],
+      "derived_rules": [
+        {
+          "type": "silhouette",
+          "value": "Oversized plus boxy plus dropped shoulder is public evidence of a roomier upper-body silhouette than regular fit.",
+          "basis_fields": ["fit", "style", "construction"],
+          "confidence": "medium"
+        },
+        {
+          "type": "measurement_needed",
+          "value": "Do not convert this product to a size recommendation without user body context, private fit history, or a size chart.",
+          "basis_fields": ["fit"],
+          "confidence": "high"
+        }
+      ],
+      "related_size_guides": ["hm_mens_tops_size_guide"],
+      "tags": ["atlas", "brand:h&m", "category:tshirt", "fit:oversized", "material:cotton", "identity:style-number"]
+    },
+    {
+      "id": "hm_relaxed_fit_tshirt_1309319010",
+      "kind": "product",
+      "identity": {
+        "brand": "H&M",
+        "retailer": "H&M",
+        "title": "Relaxed-Fit T-Shirt",
+        "category": "tshirt",
+        "gender": "men",
+        "style_number": "1309319010",
+        "color": "Black",
+        "canonical_url": "https://www2.hm.com/en_us/productpage.1309319010.html",
+        "region": "US"
+      },
+      "source_facts": [
+        {"field": "fit", "value": "Relaxed fit", "evidence": "Product page fit label."},
+        {"field": "silhouette", "value": "Casual but not oversized", "evidence": "Product description."},
+        {"field": "fabric", "value": "Medium-weight cotton jersey", "evidence": "Product description."},
+        {"field": "construction", "value": "Dropped shoulders", "evidence": "Product description."},
+        {"field": "construction", "value": "Ribbed round neck", "evidence": "Product description."},
+        {"field": "length", "value": "Regular length", "evidence": "Product page length label."}
+      ],
+      "derived_rules": [
+        {
+          "type": "fit_comparison",
+          "value": "Relaxed fit and not oversized is public evidence of moderate extra room rather than an exaggerated oversized silhouette.",
+          "basis_fields": ["fit", "silhouette"],
+          "confidence": "medium"
+        },
+        {
+          "type": "fabric_weight",
+          "value": "Medium-weight cotton jersey is stronger evidence than generic cotton for judging potential cling or drape, but it is not a private comfort outcome.",
+          "basis_fields": ["fabric"],
+          "confidence": "medium"
+        }
+      ],
+      "related_size_guides": ["hm_mens_tops_size_guide"],
+      "tags": ["atlas", "brand:h&m", "category:tshirt", "fit:relaxed", "fabric:medium-weight", "identity:style-number"]
+    },
+    {
+      "id": "hm_heavy_oversized_tshirt_1035207029",
+      "kind": "product",
+      "identity": {
+        "brand": "H&M",
+        "retailer": "H&M",
+        "title": "Oversized Fit Cotton T-shirt",
+        "category": "tshirt",
+        "gender": "men",
+        "style_number": "1035207029",
+        "color": "Black",
+        "canonical_url": "https://www2.hm.com/en_us/productpage.1035207029.html",
+        "region": "US"
+      },
+      "source_facts": [
+        {"field": "fit", "value": "Oversized", "evidence": "Product page fit label."},
+        {"field": "fabric", "value": "Thick cotton jersey", "evidence": "Product description."},
+        {"field": "weight", "value": "380 g", "evidence": "Product page weight field."},
+        {"field": "construction", "value": "Dropped shoulders", "evidence": "Product description."},
+        {"field": "neckline", "value": "Round neck", "evidence": "Product page neckline label."},
+        {"field": "length", "value": "Short", "evidence": "Product page length label."}
+      ],
+      "derived_rules": [
+        {
+          "type": "fabric_weight",
+          "value": "Thick cotton jersey plus 380 g listed weight is public evidence that this tee is materially heavier than lightweight regular basics.",
+          "basis_fields": ["fabric", "weight"],
+          "confidence": "high"
+        },
+        {
+          "type": "proportion",
+          "value": "Short length with oversized fit may produce a boxier proportion; confirm against product measurements and private length memory.",
+          "basis_fields": ["fit", "length"],
+          "confidence": "medium"
+        }
+      ],
+      "related_size_guides": ["hm_mens_tops_size_guide"],
+      "tags": ["atlas", "brand:h&m", "category:tshirt", "fit:oversized", "fabric:thick", "identity:style-number"]
+    },
+    {
+      "id": "hm_mens_tops_size_guide",
+      "kind": "brand_size_guide",
+      "identity": {
+        "brand": "H&M",
+        "retailer": "H&M",
+        "title": "H&M Men's Trousers & Tops Size Guide",
+        "category": "multi",
+        "gender": "men",
+        "style_number": null,
+        "color": null,
+        "canonical_url": "https://www.hm.com/xk/customer-service/sizeguide/men/",
+        "region": "XK"
+      },
+      "source_facts": [
+        {"field": "measurement_method", "value": "Measurements should be taken directly on the body.", "evidence": "H&M men's size guide."},
+        {"field": "chest", "value": "Chest is listed in cm for tops/trousers sizes XS through 2XL.", "evidence": "H&M men's size guide."},
+        {"field": "waist", "value": "Waist is listed in cm for tops/trousers sizes XS through 2XL.", "evidence": "H&M men's size guide."},
+        {"field": "seat", "value": "Seat is listed in cm for tops/trousers sizes XS through 2XL.", "evidence": "H&M men's size guide."},
+        {"field": "inside_leg", "value": "Inside leg is listed in cm for tops/trousers sizes XS through 2XL.", "evidence": "H&M men's size guide."}
+      ],
+      "size_chart": [
+        {
+          "scope": "men tops and trousers",
+          "measurement_type": "body",
+          "unit": "cm",
+          "columns": ["eur_size", "us_uk_au_top", "us_uk_au_bottom", "chest", "waist", "seat", "inside_leg"],
+          "rows": [
+            {"eur_size": "42", "us_uk_au_top": "32R", "us_uk_au_bottom": "28R", "chest": "84", "waist": "72", "seat": "90", "inside_leg": "81"},
+            {"eur_size": "44", "us_uk_au_top": "34R", "us_uk_au_bottom": "30R", "chest": "88", "waist": "76", "seat": "93", "inside_leg": "81"},
+            {"eur_size": "46", "us_uk_au_top": "36R", "us_uk_au_bottom": "32R", "chest": "92", "waist": "80", "seat": "96", "inside_leg": "82"},
+            {"eur_size": "48", "us_uk_au_top": "38R", "us_uk_au_bottom": "33R", "chest": "96", "waist": "84", "seat": "99", "inside_leg": "82"},
+            {"eur_size": "50", "us_uk_au_top": "40R", "us_uk_au_bottom": "34R", "chest": "100", "waist": "88", "seat": "102", "inside_leg": "83"},
+            {"eur_size": "52", "us_uk_au_top": "42R", "us_uk_au_bottom": "36R", "chest": "104", "waist": "92", "seat": "105", "inside_leg": "83"},
+            {"eur_size": "54", "us_uk_au_top": "44R", "us_uk_au_bottom": "38R", "chest": "108", "waist": "96", "seat": "108", "inside_leg": "84"},
+            {"eur_size": "56", "us_uk_au_top": "46R", "us_uk_au_bottom": "40R", "chest": "112", "waist": "100", "seat": "111", "inside_leg": "85"},
+            {"eur_size": "58", "us_uk_au_top": "48R", "us_uk_au_bottom": "42R", "chest": "116", "waist": "104", "seat": "114", "inside_leg": "85"},
+            {"eur_size": "60", "us_uk_au_top": "50R", "us_uk_au_bottom": "44R", "chest": "120", "waist": "108", "seat": "117", "inside_leg": "86"},
+            {"eur_size": "62", "us_uk_au_top": "52R", "us_uk_au_bottom": "46R", "chest": "124", "waist": "112", "seat": "120", "inside_leg": "86"}
+          ]
+        }
+      ],
+      "derived_rules": [
+        {
+          "type": "scope_boundary",
+          "value": "This H&M guide is a body measurement reference for men's tops and trousers, not a product-specific garment measurement.",
+          "basis_fields": ["measurement_method", "chest", "waist"],
+          "confidence": "high"
+        },
+        {
+          "type": "size_chart_application",
+          "value": "Use this guide only when brand, gender, region, and category scope match; exact private outcomes or product-specific measurements outrank it.",
+          "basis_fields": ["chest", "waist", "seat", "inside_leg"],
+          "confidence": "high"
+        }
+      ],
+      "tags": ["atlas", "brand:h&m", "kind:size-guide", "kind:brand-size-guide", "category:multi", "measurement:chest", "measurement:waist"]
+    },
+    {
+      "id": "hm_mens_shirts_size_guide",
+      "kind": "brand_size_guide",
+      "identity": {
+        "brand": "H&M",
+        "retailer": "H&M",
+        "title": "H&M Men's Shirts Size Guide",
+        "category": "shirt",
+        "gender": "men",
+        "style_number": null,
+        "color": null,
+        "canonical_url": "https://www.hm.com/xk/customer-service/sizeguide/men/",
+        "region": "XK"
+      },
+      "source_facts": [
+        {"field": "measurement_method", "value": "H&M says shirt collar fit can be checked by measuring a shirt from the middle of the button to the end of the button hole.", "evidence": "H&M men's size guide."},
+        {"field": "collar_size", "value": "H&M lists collar sizes XS through 2XL with EUR and US/UK/AU equivalents.", "evidence": "H&M men's size guide."},
+        {"field": "chest", "value": "Chest ranges are listed in cm for shirt sizes XS through 2XL.", "evidence": "H&M men's size guide."},
+        {"field": "waist", "value": "Waist ranges are listed in cm for shirt sizes XS through 2XL.", "evidence": "H&M men's size guide."}
+      ],
+      "size_chart": [
+        {
+          "scope": "men shirts",
+          "measurement_type": "body",
+          "unit": "cm",
+          "columns": ["alpha_size", "eur_size", "us_uk_au_collar", "chest", "waist"],
+          "rows": [
+            {"alpha_size": "XS", "eur_size": "35/36", "us_uk_au_collar": "13.5/14", "chest": "80-84", "waist": "68-72"},
+            {"alpha_size": "S", "eur_size": "37/38", "us_uk_au_collar": "14.5/15", "chest": "88-92", "waist": "76-80"},
+            {"alpha_size": "M", "eur_size": "39/40", "us_uk_au_collar": "15.25/15.75", "chest": "96-100", "waist": "84-88"},
+            {"alpha_size": "L", "eur_size": "41/42", "us_uk_au_collar": "16/16.5", "chest": "104-108", "waist": "92-96"},
+            {"alpha_size": "XL", "eur_size": "43/44", "us_uk_au_collar": "17/17.25", "chest": "112-116", "waist": "100-104"},
+            {"alpha_size": "2XL", "eur_size": "45/46", "us_uk_au_collar": "17.75/18", "chest": "120-124", "waist": "108-112"}
+          ]
+        }
+      ],
+      "derived_rules": [
+        {
+          "type": "scope_boundary",
+          "value": "This H&M shirt guide should only be used for shirt-style garments, not T-shirts unless the current evidence says the garment follows shirt sizing.",
+          "basis_fields": ["collar_size", "chest", "waist"],
+          "confidence": "high"
+        }
+      ],
+      "tags": ["atlas", "brand:h&m", "kind:size-guide", "kind:brand-size-guide", "category:shirt", "measurement:chest", "measurement:waist"]
+    },
+    {
+      "id": "snitch_coral_gardens_oversized_tshirt_4mst2551_01",
+      "kind": "product",
+      "identity": {
+        "brand": "SNITCH",
+        "retailer": "SNITCH",
+        "title": "Oversized Fit Cotton Coral Gardens Off-White T-Shirt",
+        "category": "tshirt",
+        "gender": "men",
+        "style_number": "4mst2551-01",
+        "color": "Off-white",
+        "canonical_url": "https://www.snitch.com/men-t-shirts/oversized-fit-cotton-coral-gardens-off-white-t-shirt-4mst2551-01/8651981029538/buy",
+        "region": "IN"
+      },
+      "source_facts": [
+        {"field": "fit", "value": "Oversized fit", "evidence": "Product title and product page."},
+        {"field": "composition", "value": "100% cotton", "evidence": "Product copy."},
+        {"field": "available_sizes", "value": "XS, S, M, L, XL, XXL", "evidence": "Product page size selector."},
+        {"field": "brand_size_advice", "value": "We recommend one size smaller.", "evidence": "Product page size guidance."},
+        {"field": "graphic", "value": "Coral Gardens graphic", "evidence": "Product title and copy."}
+      ],
+      "derived_rules": [
+        {
+          "type": "brand_size_advice",
+          "value": "A product-page recommendation to choose one size smaller is evidence that the garment may run large relative to standard alpha sizing.",
+          "basis_fields": ["brand_size_advice", "fit"],
+          "confidence": "high"
+        },
+        {
+          "type": "visual_boundary",
+          "value": "Graphic presence is visual evidence only. It must not be used as a fit signal unless private memory explicitly says graphics matter.",
+          "basis_fields": ["graphic"],
+          "confidence": "high"
+        }
+      ],
+      "related_size_guides": ["snitch_coral_gardens_oversized_tshirt_size_guide"],
+      "tags": ["atlas", "brand:snitch", "category:tshirt", "fit:oversized", "material:cotton", "identity:style-number"]
+    },
+    {
+      "id": "snitch_coral_gardens_oversized_tshirt_size_guide",
+      "kind": "product_size_guide",
+      "identity": {
+        "brand": "SNITCH",
+        "retailer": "SNITCH",
+        "title": "Oversized Fit Cotton Coral Gardens Off-White T-Shirt Size Chart",
+        "category": "tshirt",
+        "gender": "men",
+        "style_number": "4mst2551-01",
+        "color": "Off-white",
+        "canonical_url": "https://www.snitch.com/men-t-shirts/oversized-fit-cotton-coral-gardens-off-white-t-shirt-4mst2551-01/8651981029538/buy",
+        "region": "IN"
+      },
+      "source_facts": [
+        {"field": "chart_scope", "value": "Product-specific size chart for the Coral Gardens oversized T-shirt.", "evidence": "Snitch product page size chart."},
+        {"field": "measurement_unit", "value": "Inches", "evidence": "Snitch product page states measurements are in inches."},
+        {"field": "measurements", "value": "Chart lists chest, length, shoulder, and sleeve for sizes S through XXL.", "evidence": "Snitch product page size chart."}
+      ],
+      "size_chart": [
+        {
+          "scope": "product-specific oversized t-shirt",
+          "measurement_type": "garment",
+          "unit": "in",
+          "columns": ["size", "chest", "length", "shoulder", "sleeve"],
+          "rows": [
+            {"size": "S", "chest": "42", "length": "29.5", "shoulder": "22", "sleeve": "9"},
+            {"size": "M", "chest": "44", "length": "29", "shoulder": "22.5", "sleeve": "9.5"},
+            {"size": "L", "chest": "46", "length": "30", "shoulder": "23.5", "sleeve": "9.5"},
+            {"size": "XL", "chest": "48", "length": "31", "shoulder": "24.5", "sleeve": "9.5"},
+            {"size": "XXL", "chest": "50", "length": "31.5", "shoulder": "25.5", "sleeve": "10"}
+          ]
+        }
+      ],
+      "derived_rules": [
+        {
+          "type": "product_size_chart_application",
+          "value": "This product-specific garment chart outranks a generic brand chart for this Snitch T-shirt, but private try-on outcomes still outrank both.",
+          "basis_fields": ["chart_scope", "measurement_unit", "measurements"],
+          "confidence": "high"
+        },
+        {
+          "type": "measurement_boundary",
+          "value": "These are garment measurements in inches; they should not be treated as body measurements.",
+          "basis_fields": ["measurement_unit", "measurements"],
+          "confidence": "high"
+        }
+      ],
+      "tags": ["atlas", "brand:snitch", "kind:size-guide", "kind:product-size-guide", "category:tshirt", "identity:style-number", "measurement:chest", "measurement:shoulder"]
+    },
+    {
+      "id": "puma_essentials_logo_mens_tee_680852",
+      "kind": "product",
+      "identity": {
+        "brand": "PUMA",
+        "retailer": "PUMA",
+        "title": "Essentials Logo Men's Tee",
+        "category": "tshirt",
+        "gender": "men",
+        "style_number": "680852",
+        "color": "PUMA Black",
+        "canonical_url": "https://ph.puma.com/ph/en/pd/essentials-logo-mens-tee/680852.html",
+        "region": "PH"
+      },
+      "source_facts": [
+        {"field": "fit", "value": "Regular fit", "evidence": "Product page details."},
+        {"field": "neckline", "value": "Ribbed crew neck", "evidence": "Product page details."},
+        {"field": "graphic", "value": "PUMA No. 1 Logo rubber print at chest", "evidence": "Product page details."},
+        {"field": "composition", "value": "100% cotton", "evidence": "Product page details."},
+        {"field": "style_number", "value": "680852_51", "evidence": "Product page style field."}
+      ],
+      "derived_rules": [
+        {
+          "type": "fit_label",
+          "value": "Regular fit is only a generic product fit label. It should not override private history that prefers relaxed, oversized, or non-clingy tops.",
+          "basis_fields": ["fit"],
+          "confidence": "high"
+        },
+        {
+          "type": "visual_boundary",
+          "value": "Chest-logo placement is visual evidence only. It is not a fit, size, or comfort signal.",
+          "basis_fields": ["graphic"],
+          "confidence": "high"
+        }
+      ],
+      "related_size_guides": ["puma_mens_clothing_size_conversion_guide"],
+      "tags": ["atlas", "brand:puma", "category:tshirt", "fit:regular", "material:cotton", "identity:style-number"]
+    },
+    {
+      "id": "puma_mens_clothing_size_conversion_guide",
+      "kind": "brand_size_guide",
+      "identity": {
+        "brand": "PUMA",
+        "retailer": "PUMA",
+        "title": "PUMA Men's Clothing Size Conversion Guide",
+        "category": "multi",
+        "gender": "men",
+        "style_number": null,
+        "color": null,
+        "canonical_url": "https://production-pna-sfcc.puma.com/us/en/size-charts.html",
+        "region": "US"
+      },
+      "source_facts": [
+        {"field": "men_clothing_conversion", "value": "PUMA lists men's clothing conversion rows from US XXS through 3XL to DE, UK, FR, IT, and ES systems.", "evidence": "PUMA US size chart."},
+        {"field": "measurement_method_chest", "value": "Measure around the fullest part of chest, wrapping underneath arms.", "evidence": "PUMA US size chart."},
+        {"field": "measurement_method_waist", "value": "Measure around the narrowest part of waist.", "evidence": "PUMA US size chart."},
+        {"field": "measurement_method_hips", "value": "Measure around the fullest part of hips.", "evidence": "PUMA US size chart."},
+        {"field": "measurement_method_inseam", "value": "Measure length from hip to ankle.", "evidence": "PUMA US size chart."}
+      ],
+      "size_chart": [
+        {
+          "scope": "men clothing",
+          "measurement_type": "international_size_conversion",
+          "unit": "label",
+          "columns": ["us", "de", "uk", "fr", "it", "es"],
+          "rows": [
+            {"us": "XXS", "de": "38", "uk": "XXS", "fr": "38", "it": "38", "es": "38"},
+            {"us": "XS", "de": "40-42", "uk": "XS", "fr": "40-42", "it": "42", "es": "42"},
+            {"us": "S", "de": "44-46", "uk": "S", "fr": "44-46", "it": "46", "es": "46"},
+            {"us": "M", "de": "48-50", "uk": "M", "fr": "48-50", "it": "50", "es": "50"},
+            {"us": "L", "de": "52-54", "uk": "L", "fr": "52-54", "it": "54", "es": "54"},
+            {"us": "XL", "de": "56-58", "uk": "XL", "fr": "56-58", "it": "58", "es": "58"},
+            {"us": "XXL", "de": "60-62", "uk": "XXL", "fr": "60-62", "it": "62", "es": "62"},
+            {"us": "3XL", "de": "64-66", "uk": "3XL", "fr": "64-66", "it": "66", "es": "66"}
+          ]
+        }
+      ],
+      "derived_rules": [
+        {
+          "type": "measurement_needed",
+          "value": "For PUMA apparel, conversion labels are not body measurements; ask for chest and waist measurements or product-specific chart evidence before making a confident fit call.",
+          "basis_fields": ["men_clothing_conversion", "measurement_method_chest", "measurement_method_waist"],
+          "confidence": "high"
+        },
+        {
+          "type": "scope_boundary",
+          "value": "This is a brand size conversion and measurement-method source, not a product-specific garment measurement.",
+          "basis_fields": ["men_clothing_conversion"],
+          "confidence": "high"
+        }
+      ],
+      "tags": ["atlas", "brand:puma", "kind:size-guide", "kind:brand-size-guide", "category:multi", "measurement:chest", "measurement:waist"]
+    },
+    {
+      "id": "levis_mens_jeans_size_guide",
+      "kind": "brand_size_guide",
+      "identity": {
+        "brand": "Levi's",
+        "retailer": "Levi's",
+        "title": "Levi's Men's Jeans Size Guide",
+        "category": "jeans",
+        "gender": "men",
+        "style_number": null,
+        "color": null,
+        "canonical_url": "https://help.levi.com/hc/en-us/articles/360025097092-Levi-s-Product-Size-Guide",
+        "region": "US"
+      },
+      "source_facts": [
+        {"field": "measurement_method_waist", "value": "Measure around natural waistline just above belly button, snug but not too tight.", "evidence": "Levi's product size guide."},
+        {"field": "measurement_method_hips", "value": "Measure around the fullest part of hips with tape parallel to the floor.", "evidence": "Levi's product size guide."},
+        {"field": "measurement_method_inseam", "value": "Measure from top of inner thigh to bottom of ankle.", "evidence": "Levi's product size guide."},
+        {"field": "men_jeans_chart", "value": "Levi's lists men's jeans sizes 28 through 38 with waist, hips, and inseam options.", "evidence": "Levi's product size guide."}
+      ],
+      "size_chart": [
+        {
+          "scope": "men jeans",
+          "measurement_type": "body",
+          "unit": "in",
+          "columns": ["size", "waist", "hips", "inseam"],
+          "rows": [
+            {"size": "28", "waist": "28-29", "hips": "34-35", "inseam": "30, 32, 34"},
+            {"size": "30", "waist": "30-31", "hips": "36-37", "inseam": "30, 32, 34"},
+            {"size": "32", "waist": "32-33", "hips": "38-39", "inseam": "30, 32, 34"},
+            {"size": "34", "waist": "34-35", "hips": "40-41", "inseam": "30, 32, 34"},
+            {"size": "36", "waist": "36-37", "hips": "42-43", "inseam": "30, 32, 34"},
+            {"size": "38", "waist": "38-39", "hips": "44-45", "inseam": "30, 32, 34"}
+          ]
+        }
+      ],
+      "derived_rules": [
+        {
+          "type": "size_chart_application",
+          "value": "For Levi's jeans, waist, hips, and inseam are all required to use the chart responsibly; fit family still affects silhouette.",
+          "basis_fields": ["measurement_method_waist", "measurement_method_hips", "measurement_method_inseam"],
+          "confidence": "high"
+        },
+        {
+          "type": "scope_boundary",
+          "value": "This is a men's jeans body-size guide, not a product-specific fit guarantee for every Levi's fit number.",
+          "basis_fields": ["men_jeans_chart"],
+          "confidence": "high"
+        }
+      ],
+      "tags": ["atlas", "brand:levis", "kind:size-guide", "kind:brand-size-guide", "category:jeans", "measurement:waist", "measurement:hips", "measurement:inseam"]
+    },
+    {
+      "id": "levis_501_original_mens_jeans_005010193",
+      "kind": "product",
+      "identity": {
+        "brand": "Levi's",
+        "retailer": "Levi's",
+        "title": "501 Original Men's Jeans",
+        "category": "jeans",
+        "gender": "men",
+        "style_number": "005010193",
+        "color": "Medium Wash",
+        "canonical_url": "https://www.levi.com/US/en_US/clothing/men/jeans/straight/501-original-mens-jeans/p/005010193",
+        "region": "US"
+      },
+      "source_facts": [
+        {"field": "fit_thigh", "value": "Regular through the thigh", "evidence": "Product page fit section."},
+        {"field": "rise", "value": "Sits at your waist", "evidence": "Product page fit section."},
+        {"field": "leg", "value": "Straight leg", "evidence": "Product page fit section."},
+        {"field": "front_rise", "value": "11.25 in based on size 32", "evidence": "Product page measurements."},
+        {"field": "knee", "value": "17.5 in based on size 32", "evidence": "Product page measurements."},
+        {"field": "leg_opening", "value": "16 in based on size 32", "evidence": "Product page measurements."}
+      ],
+      "derived_rules": [
+        {
+          "type": "denim_fit_baseline",
+          "value": "501 Original is public evidence for a regular-thigh, at-waist, straight-leg denim baseline.",
+          "basis_fields": ["fit_thigh", "rise", "leg"],
+          "confidence": "high"
+        },
+        {
+          "type": "measurement_needed",
+          "value": "Waist, rise, thigh, and leg opening history should be used before recommending a denim size or silhouette.",
+          "basis_fields": ["front_rise", "knee", "leg_opening"],
+          "confidence": "high"
+        }
+      ],
+      "related_size_guides": ["levis_mens_jeans_size_guide"],
+      "tags": ["atlas", "brand:levis", "category:jeans", "fit:regular", "leg:straight", "identity:style-number"]
+    },
+    {
+      "id": "levis_511_slim_mens_jeans_045111907",
+      "kind": "product",
+      "identity": {
+        "brand": "Levi's",
+        "retailer": "Levi's",
+        "title": "511 Slim Men's Jeans",
+        "category": "jeans",
+        "gender": "men",
+        "style_number": "045111907",
+        "color": "Native Cali - Black",
+        "canonical_url": "https://www.levi.com/US/en_US/jeans-by-fit-number/men/jeans/511TM/511TM-slim-mens-jeans/p/045111907",
+        "region": "US"
+      },
+      "source_facts": [
+        {"field": "fit", "value": "Slim throughout", "evidence": "Product page fit section."},
+        {"field": "seat_and_thigh", "value": "Narrow through the seat and thigh, but still roomy", "evidence": "Product page style description."},
+        {"field": "rise", "value": "Sits below your waist", "evidence": "Product page fit section."},
+        {"field": "leg", "value": "Slim leg", "evidence": "Product page fit section."},
+        {"field": "composition", "value": "99% cotton, 1% elastane", "evidence": "Product page composition."},
+        {"field": "material", "value": "Stretch denim", "evidence": "Product page composition and care."}
+      ],
+      "derived_rules": [
+        {
+          "type": "denim_fit_baseline",
+          "value": "511 Slim is public evidence for a slimmer seat, thigh, and leg than straight regular denim.",
+          "basis_fields": ["fit", "seat_and_thigh", "leg"],
+          "confidence": "high"
+        },
+        {
+          "type": "material_behavior",
+          "value": "Elastane stretch is public evidence of give, but it does not prove long-term comfort or bagging behavior for a specific user.",
+          "basis_fields": ["composition", "material"],
+          "confidence": "medium"
+        }
+      ],
+      "related_size_guides": ["levis_mens_jeans_size_guide"],
+      "tags": ["atlas", "brand:levis", "category:jeans", "fit:slim", "material:stretch-denim", "identity:style-number"]
+    },
+    {
+      "id": "zara_mens_shirts_category_and_size_guidance",
+      "kind": "category_signal",
+      "identity": {
+        "brand": "ZARA",
+        "retailer": "ZARA",
+        "title": "Men's shirt category and sizing guidance",
+        "category": "shirt",
+        "gender": "men",
+        "style_number": null,
+        "color": null,
+        "canonical_url": "https://www.zara.com/us/en/man-shirts-l737.html",
+        "supporting_url": "https://www.zara.com/us/en/help-center/MySize",
+        "region": "US"
+      },
+      "source_facts": [
+        {"field": "category_fit_variety", "value": "Zara men's shirt category includes regular fit, relaxed fit, flowy, linen, cotton-linen, and boxy shirt styles.", "evidence": "Category page listings."},
+        {"field": "sizing_variability", "value": "Zara states sizes can vary according to style, cut, and fabric.", "evidence": "Zara size help page."},
+        {"field": "measurement_guide", "value": "Zara product pages can show body measurements tailored to the selected size.", "evidence": "Zara size help page."}
+      ],
+      "derived_rules": [
+        {
+          "type": "scope_boundary",
+          "value": "Zara brand name alone is not enough for confident sizing because style, cut, and fabric vary by garment.",
+          "basis_fields": ["category_fit_variety", "sizing_variability"],
+          "confidence": "high"
+        },
+        {
+          "type": "measurement_needed",
+          "value": "Ask for product-page measurements or screenshots before giving a confident Zara shirt size recommendation.",
+          "basis_fields": ["measurement_guide"],
+          "confidence": "high"
+        }
+      ],
+      "tags": ["atlas", "brand:zara", "category:shirt", "sizing:style-dependent", "identity:category-signal"]
+    }
+  ]
+}

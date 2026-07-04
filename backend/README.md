@@ -69,7 +69,7 @@ OpenAPI docs are available at `http://localhost:8080/docs`.
 Use the Windows runner to avoid inline environment-variable quoting issues:
 
 ```powershell
-cd D:\Development\Projects\cognee-hackathon\mizaaj\backend
+cd D:\Development\Projects\cognee-hackathon\fitrecall\backend
 .\scripts\test-backend.ps1
 ```
 

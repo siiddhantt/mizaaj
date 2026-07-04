@@ -4,14 +4,16 @@ This is the working truth for hackathon readiness. An item is only done when it 
 
 ## Product Scope
 
-Mizaaj is a private AI fit-memory assistant. Users attach clothing evidence, ask fit questions, approve what should become memory, and later get advice grounded in their own saved outcomes and Cognee recall.
+Mizaaj is a private AI fit-memory assistant. Users attach clothing evidence, ask fit questions, approve what should become memory, and later get advice grounded in their own saved outcomes, curated public fit intelligence, and Cognee recall.
+
+The submission scope now includes Mizaaj Atlas: a small, curated, seeded public knowledge layer for product and brand fit intelligence. Atlas is not a user-review marketplace. It exists to show how Mizaaj can help a first-time user before their private memory is rich, while still keeping private user memories separate.
 
 Out of scope before submission unless all core items are done:
 
-- Public/shared brand memory.
 - Browser extension capture.
 - Affiliate or monetization flows.
 - Large recommendation marketplace features.
+- Unmoderated public user-review ingestion.
 
 ## Coding Standard
 
@@ -48,6 +50,7 @@ Out of scope before submission unless all core items are done:
 - [x] Optional Clerk auth shell and backend JWT verification.
 - [x] Cognee local provider path.
 - [x] Cognee Cloud provider path with request-shape tests.
+- [x] Mizaaj Atlas v2 clean seed schema and Cognee Cloud ingestion script.
 - [x] Windows backend verification runner for lint, format, and tests.
 - [x] Full fake-provider API workflow simulation.
 - [x] Live text-only provider smoke against Postgres, OpenRouter, and local Cognee.
@@ -87,10 +90,26 @@ Out of scope before submission unless all core items are done:
   - [x] Tests cover DB state and Cognee state after deletion.
 
 - [ ] Cloud smoke test.
-  - [ ] Switch `.env` to `MEMORY_PROVIDER=cognee_cloud`.
-  - [ ] Run remember/recall/delete against Cognee Cloud credits.
-  - [ ] Confirm dataset naming and auth work.
+  - [x] Switch `.env` to `MEMORY_PROVIDER=cognee_cloud`.
+  - [x] Confirm Cognee Cloud API key auth and dataset naming work.
+  - [x] Run private remember/rebuild against Cognee Cloud credits.
+  - [ ] Run recall against Cognee Cloud from the app flow.
+  - [ ] Run memory clear/rebuild against Cognee Cloud from the app flow.
   - [ ] Decide final demo default: local fallback plus cloud mode, or cloud primary.
+
+- [ ] Mizaaj Atlas curated knowledge layer.
+  - [x] Define Atlas dataset naming, e.g. `mizaaj_atlas_seed_v2`, separate from private user datasets.
+  - [x] Create structured seed files for brands, products, size charts, fabric notes, and fit risks.
+  - [x] Remove demo questions and user-taste assumptions from Atlas seed memory.
+  - [x] Document product identity, matching, and ambiguity rules.
+  - [x] Add a backend ingestion script that indexes Atlas seed files into Cognee Cloud.
+  - [ ] Re-index the cleaned Atlas v2 seed into Cognee Cloud.
+  - [ ] Directly smoke-test Atlas v2 recall against Cognee Cloud.
+  - [ ] Add a backend provider/service that recalls Atlas facts separately from private memories.
+  - [ ] Update Ask response shape to label `private_memory`, `current_item`, and `mizaaj_atlas` evidence.
+  - [ ] Add tests proving private and Atlas recall are separated and source-labeled.
+  - [ ] Add UI badges/sections for Atlas evidence without making answers cluttered.
+  - [ ] Manually smoke-test a new product where private memory is sparse but Atlas improves the answer.
 
 - [ ] Full API manual flow.
   - [x] Add fake-provider workflow test for the full private fit-memory path.
@@ -121,6 +140,24 @@ Out of scope before submission unless all core items are done:
   - [ ] Demo script matches the implemented product.
   - [ ] Screenshots/video show a real clothing example.
   - [ ] Track choice is explicit: Cognee Cloud primary, OSS fallback.
+  - [ ] Cognee Cloud dashboard shows the private user brain and Atlas brain used in the demo.
+  - [ ] Demo proves one returning-user flow and one first-time/new-product flow.
+
+## Demo Seed Checklist
+
+- [ ] Existing Bear House black tee becomes the private-memory anchor.
+  - [ ] Product photos are visible in Memory.
+  - [ ] Saved chat is linked to the product.
+  - [ ] One try-on outcome explains why it worked.
+- [ ] Puma or similar tee becomes the negative/fabric-risk memory.
+  - [ ] Capture tag/product images.
+  - [ ] Save an outcome about stretching, flimsy fabric, or poor drape.
+  - [ ] Ask later about a similar item and verify Mizaaj warns from private memory.
+- [ ] Atlas has enough seeded public knowledge to help on day one.
+  - [ ] 5 to 8 products across 3 to 4 brands.
+  - [ ] At least 2 product-page screenshots per product: product details and size chart.
+  - [ ] At least 1 source-backed non-personal derived rule per product: fit intent, fabric risk, size interpretation, or styling evidence.
+  - [ ] At least 2 category-level notes: relaxed tees and shirts are enough for the demo.
 
 ## Nice If Core Is Done
 
@@ -135,28 +172,28 @@ Out of scope before submission unless all core items are done:
 Backend:
 
 ```powershell
-cd D:\Development\Projects\cognee-hackathon\mizaaj\backend
+cd D:\Development\Projects\cognee-hackathon\fitrecall\backend
 .\scripts\test-backend.ps1
 ```
 
 Fast backend loop without lint:
 
 ```powershell
-cd D:\Development\Projects\cognee-hackathon\mizaaj\backend
+cd D:\Development\Projects\cognee-hackathon\fitrecall\backend
 .\scripts\test-backend.ps1 -SkipLint
 ```
 
 Verbose workflow simulation:
 
 ```powershell
-cd D:\Development\Projects\cognee-hackathon\mizaaj\backend
+cd D:\Development\Projects\cognee-hackathon\fitrecall\backend
 .\scripts\test-backend.ps1 -SkipLint -VerboseWorkflow
 ```
 
 Live provider smoke:
 
 ```powershell
-cd D:\Development\Projects\cognee-hackathon\mizaaj\backend
+cd D:\Development\Projects\cognee-hackathon\fitrecall\backend
 .\scripts\live-smoke.ps1
 .\scripts\live-smoke.ps1 -SpendTokens
 .\scripts\live-smoke.ps1 -SpendTokens -ImageUrl "https://example.com/clothing-tag.jpg"
@@ -165,7 +202,7 @@ cd D:\Development\Projects\cognee-hackathon\mizaaj\backend
 Frontend:
 
 ```powershell
-cd D:\Development\Projects\cognee-hackathon\mizaaj\frontend
+cd D:\Development\Projects\cognee-hackathon\fitrecall\frontend
 npm run test
 npm run build
 ```
@@ -173,6 +210,6 @@ npm run build
 Local services:
 
 ```powershell
-cd D:\Development\Projects\cognee-hackathon\mizaaj
+cd D:\Development\Projects\cognee-hackathon\fitrecall
 docker compose up -d
 ```

@@ -15,6 +15,8 @@ class ProductService:
 
     def backfill_saved_memory_products(self, user_id: UUID) -> None:
         for record in self.store.list_saved_memories(user_id):
+            if record.product_id is not None:
+                continue
             if record.capture_id is None:
                 continue
 
@@ -37,8 +39,7 @@ class ProductService:
                     }
                 )
             )
-            if record.product_id is None:
-                self.store.save_memory_record(record.model_copy(update={"product_id": product.id}))
+            self.store.save_memory_record(record.model_copy(update={"product_id": product.id}))
 
     def get_product(self, product_id: UUID) -> ProductSnapshot:
         return self.store.get_product(product_id)

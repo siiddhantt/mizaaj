@@ -97,7 +97,7 @@ class PostgresStore:
         with self.sessionmaker() as session:
             row = session.get(ProfileRow, user_id)
             if row is None:
-                profile = FitProfile(user_id=user_id, display_name="New shopper")
+                profile = FitProfile(user_id=user_id, display_name="My fit profile")
                 session.add(ProfileRow(user_id=user_id, payload=_dump(profile)))
                 session.commit()
                 return profile
@@ -353,7 +353,7 @@ class PostgresStore:
         row = session.get(ProfileRow, user_id)
         if row is not None:
             return FitProfile.model_validate(row.payload)
-        return FitProfile(user_id=user_id, display_name="New shopper")
+        return FitProfile(user_id=user_id, display_name="My fit profile")
 
 
 def _dump(model) -> dict[str, Any]:

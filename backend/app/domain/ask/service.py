@@ -15,6 +15,7 @@ from app.domain.ask.schemas import (
 from app.domain.common import FitOutcome
 from app.domain.memory.gateway import MemoryGateway
 from app.domain.memory.rebuilder import PrivateMemoryRebuilder
+from app.domain.memory.recall import clean_recall_text
 from app.domain.memory.schemas import FitMemoryEntry, MemoryContext, RecallFitContextRequest
 from app.domain.products.identity import display_name, product_from_draft
 from app.domain.products.schemas import ProductSnapshot
@@ -43,7 +44,12 @@ class AskFitService:
             user_id=request.user_id,
             question=request.question,
             answer=answer,
-            confidence=self._confidence(product, related_purchases, recalled),
+            confidence=self._confidence(
+                product,
+                related_purchases,
+                recalled,
+                has_profile_signal=bool(self._profile_signal(profile)),
+            ),
             evidence=evidence,
             recalled_facts=recalled.facts,
             memory_drafts=drafts,
@@ -309,6 +315,16 @@ class AskFitService:
                 )
             )
 
+        profile_signal = self._profile_signal(profile)
+        if profile_signal:
+            evidence.append(
+                AskEvidence(
+                    label="Fit profile",
+                    detail=profile_signal,
+                    source=f"profile:{profile.user_id}",
+                )
+            )
+
         evidence.extend(
             AskEvidence(
                 label="Private memory",
@@ -327,13 +343,18 @@ class AskFitService:
         purchases: list[PurchaseRecord],
         recalled: MemoryContext,
     ) -> str:
+        profile_signal = self._profile_signal(profile)
         if product is None:
-            if purchases or recalled.facts:
+            if purchases or recalled.facts or profile_signal:
                 signal = (
                     self._purchase_signal(purchases)
                     if purchases
                     else self._clean_memory_text(recalled.facts[0].text)
+                    if recalled.facts
+                    else profile_signal
                 )
+                if not self._asks_about_current_item(request.question):
+                    return f"From your saved memory: {signal}"
                 return (
                     "I can use your saved memory, but attach or extract the current item "
                     f"for a real size call. Most relevant signal: {signal}"
@@ -359,6 +380,9 @@ class AskFitService:
             if recalled.facts
             else ""
         )
+        profile_guardrail = (
+            f" Keep your fit profile in mind: {profile_signal}." if profile_signal else ""
+        )
         qualifier = (
             "Start with"
             if purchases or recalled.facts
@@ -367,9 +391,9 @@ class AskFitService:
 
         return (
             f"{qualifier} {size or 'the most familiar size'} for {self._display_name(product)}. "
-            f"{purchase_signal}{memory_signal} After trying it, save whether the shoulder, chest, "
-            "length, fabric feel, and silhouette matched what you wanted so the next answer "
-            "gets sharper."
+            f"{purchase_signal}{memory_signal}{profile_guardrail} After trying it, save whether "
+            "the shoulder, chest, length, fabric feel, and silhouette matched what you wanted so "
+            "the next answer gets sharper."
         )
 
     def _drafts(
@@ -496,8 +520,10 @@ class AskFitService:
         product: ProductSnapshot | None,
         purchases: list[PurchaseRecord],
         recalled: MemoryContext,
+        *,
+        has_profile_signal: bool = False,
     ) -> float:
-        value = 0.34 if product else 0.22
+        value = 0.34 if product else (0.5 if recalled.facts or has_profile_signal else 0.22)
         if product and product.size_chart:
             value += 0.16
         if product and (product.size_options or product.size_labels):
@@ -506,7 +532,26 @@ class AskFitService:
             value += min(0.28, len(purchases) * 0.1)
         if recalled.facts:
             value += min(0.22, len(recalled.facts) * 0.055)
+        if has_profile_signal:
+            value += 0.06
         return min(value, 0.9)
+
+    def _asks_about_current_item(self, question: str) -> bool:
+        text = question.lower()
+        current_item_signals = [
+            "this item",
+            "this product",
+            "this shirt",
+            "this tee",
+            "these photos",
+            "attached",
+            "current item",
+            "what size should i",
+            "should i buy this",
+            "will this fit",
+            "will this match",
+        ]
+        return any(signal in text for signal in current_item_signals)
 
     def _recommended_size(
         self, product: ProductSnapshot, profile: FitProfile, purchases: list[PurchaseRecord]
@@ -551,6 +596,14 @@ class AskFitService:
             f"You have {len(purchases)} related saved outcome signal(s), but none marked kept yet."
         )
 
+    def _profile_signal(self, profile: FitProfile) -> str:
+        signals: list[str] = []
+        if profile.sensitivities:
+            signals.append(f"watch {', '.join(profile.sensitivities[:4])}")
+        if profile.body_notes and profile.body_notes.strip():
+            signals.append(profile.body_notes.strip())
+        return "; ".join(signals).strip()[:240].rstrip()
+
     def _product_detail(self, product: ProductSnapshot) -> str:
         parts = [
             self._display_name(product),
@@ -574,13 +627,7 @@ class AskFitService:
             r"text=['\"](.+?)['\"]\s+(?:dataset_name|metadata|source|score|$)", text
         )
         text = (raw_match or text_match).group(1) if raw_match or text_match else text
-        return (
-            text.replace("\\n", " ")
-            .replace("\\'", "'")
-            .replace('\\"', '"')
-            .replace("**", "")
-            .strip()
-        )
+        return clean_recall_text(text)
 
     def _display_name(self, product: ProductSnapshot) -> str:
         return display_name(product)

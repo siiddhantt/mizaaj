@@ -9,6 +9,7 @@ from app.domain.captures.schemas import CaptureResponse
 from app.domain.common import ClothingCategory
 from app.domain.memory.schemas import FitMemoryEntry, RecallFitContextRequest
 from app.domain.products.schemas import ProductDraft, ProductSnapshot, SizeLabel
+from app.domain.profiles.schemas import FitProfileUpdate
 from app.storage.in_memory import LOCAL_USER_ID, InMemoryStore
 from tests.stubs import StubMemoryGateway
 
@@ -43,6 +44,60 @@ async def test_ask_returns_private_evidence_and_memory_drafts():
     assert any(item.label == "Private memory" for item in response.evidence)
     assert any(draft.kind == "fit_preference" for draft in response.memory_drafts)
     assert any("drape" in draft.text for draft in response.memory_drafts)
+
+
+@pytest.mark.asyncio
+async def test_ask_answers_saved_taste_without_current_item_warning():
+    store = InMemoryStore.seeded()
+    memory = StubMemoryGateway()
+    await memory.remember_private(
+        LOCAL_USER_ID,
+        FitMemoryEntry(
+            subject="taste:black_tee",
+            text=(
+                "User prefers relaxed non-clingy black T-shirts that do not feel tight "
+                "around the stomach or chest and use small tasteful artwork."
+            ),
+            tags=["category:tshirt", "signal:taste"],
+        ),
+    )
+
+    response = await AskFitService(store, memory).ask(
+        AskFitRequest(
+            user_id=LOCAL_USER_ID,
+            question="What are my non-negotiables for another black tee?",
+        )
+    )
+
+    assert response.answer.startswith("From your saved memory:")
+    assert "attach or extract" not in response.answer.lower()
+    assert response.confidence >= 0.5
+
+
+@pytest.mark.asyncio
+async def test_ask_uses_profile_context_without_attached_item():
+    store = InMemoryStore()
+    memory = StubMemoryGateway()
+    store.update_profile(
+        LOCAL_USER_ID,
+        FitProfileUpdate(
+            display_name="Sid",
+            body_notes="Prefers subtle artwork, relaxed drape, and no chest or stomach cling.",
+            sensitivities=["chest cling", "stomach cling", "fabric feels flimsy"],
+        ),
+    )
+
+    response = await AskFitService(store, memory).ask(
+        AskFitRequest(
+            user_id=LOCAL_USER_ID,
+            question="What should I watch for when buying another black tee?",
+        )
+    )
+
+    assert response.answer.startswith("From your saved memory:")
+    assert "subtle artwork" in response.answer
+    assert "chest cling" in response.answer
+    assert response.confidence >= 0.5
 
 
 @pytest.mark.asyncio

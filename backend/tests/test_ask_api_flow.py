@@ -1,12 +1,25 @@
+from uuid import UUID
+
 from fastapi.testclient import TestClient
 
-from app.core.dependencies import get_memory_gateway, get_store
+from app.core.auth import local_auth_context
+from app.core.dependencies import (
+    get_auth_context,
+    get_extraction_gateway,
+    get_memory_gateway,
+    get_store,
+)
 from app.domain.ask.schemas import SavedMemoryRecord
 from app.domain.common import ClothingCategory
 from app.domain.products.schemas import ProductSnapshot
 from app.main import create_app
 from app.storage.in_memory import LOCAL_USER_ID, InMemoryStore
-from tests.stubs import StubMemoryGateway
+from tests.stubs import StubExtractionGateway, StubMemoryGateway
+
+
+def make_test_client(app):
+    app.dependency_overrides[get_auth_context] = local_auth_context
+    return TestClient(app)
 
 
 def test_ask_api_returns_and_remembers_memory_drafts():
@@ -17,7 +30,7 @@ def test_ask_api_returns_and_remembers_memory_drafts():
     memory = StubMemoryGateway()
     app.dependency_overrides[get_store] = lambda: store
     app.dependency_overrides[get_memory_gateway] = lambda: memory
-    client = TestClient(app)
+    client = make_test_client(app)
     product = store.list_products()[0]
 
     ask_response = client.post(
@@ -68,13 +81,15 @@ def test_ask_api_returns_and_remembers_memory_drafts():
 
 def test_remembering_capture_backed_chat_promotes_product_identity():
     get_store.cache_clear()
+    get_extraction_gateway.cache_clear()
     get_memory_gateway.cache_clear()
     app = create_app()
     store = InMemoryStore.seeded()
     memory = StubMemoryGateway()
     app.dependency_overrides[get_store] = lambda: store
+    app.dependency_overrides[get_extraction_gateway] = lambda: StubExtractionGateway()
     app.dependency_overrides[get_memory_gateway] = lambda: memory
-    client = TestClient(app)
+    client = make_test_client(app)
 
     capture_response = client.post(
         "/api/v1/captures",
@@ -125,13 +140,15 @@ def test_remembering_capture_backed_chat_promotes_product_identity():
 
 def test_product_list_backfills_legacy_capture_backed_memory_identity():
     get_store.cache_clear()
+    get_extraction_gateway.cache_clear()
     get_memory_gateway.cache_clear()
     app = create_app()
     store = InMemoryStore.seeded()
     memory = StubMemoryGateway()
     app.dependency_overrides[get_store] = lambda: store
+    app.dependency_overrides[get_extraction_gateway] = lambda: StubExtractionGateway()
     app.dependency_overrides[get_memory_gateway] = lambda: memory
-    client = TestClient(app)
+    client = make_test_client(app)
 
     capture_response = client.post(
         "/api/v1/captures",
@@ -169,6 +186,69 @@ def test_product_list_backfills_legacy_capture_backed_memory_identity():
     assert str(promoted_capture.product_snapshot.id) == promoted_product["id"]
 
 
+def test_product_list_does_not_promote_capture_linked_to_existing_product():
+    get_store.cache_clear()
+    get_extraction_gateway.cache_clear()
+    get_memory_gateway.cache_clear()
+    app = create_app()
+    store = InMemoryStore.seeded()
+    memory = StubMemoryGateway()
+    app.dependency_overrides[get_store] = lambda: store
+    app.dependency_overrides[get_extraction_gateway] = lambda: StubExtractionGateway()
+    app.dependency_overrides[get_memory_gateway] = lambda: memory
+    client = make_test_client(app)
+    existing_product = store.list_products()[0]
+
+    capture_response = client.post(
+        "/api/v1/captures",
+        json={
+            "user_id": str(LOCAL_USER_ID),
+            "source_type": "manual",
+            "text_blocks": ["More page screenshots for the same Bear House black tee."],
+            "assets": [],
+        },
+    )
+    assert capture_response.status_code == 200
+    capture = capture_response.json()
+
+    ask_response = client.post(
+        "/api/v1/ask",
+        json={
+            "user_id": str(LOCAL_USER_ID),
+            "capture_id": capture["id"],
+            "question": "Remember that these details belong to my existing tee.",
+        },
+    )
+    assert ask_response.status_code == 200
+    payload = ask_response.json()
+
+    remember_response = client.post(
+        "/api/v1/ask/remember",
+        json={
+            "user_id": str(LOCAL_USER_ID),
+            "drafts": payload["memory_drafts"],
+            "question": payload["question"],
+            "answer": payload["answer"],
+            "product_id": str(existing_product.id),
+            "capture_id": capture["id"],
+        },
+    )
+    assert remember_response.status_code == 200
+    memory_record = remember_response.json()["memory_record"]
+    assert memory_record["product_id"] == str(existing_product.id)
+    assert memory_record["capture_id"] == capture["id"]
+
+    products = client.get("/api/v1/products").json()
+    assert str(existing_product.id) in {product["id"] for product in products}
+    assert capture["id"] not in {
+        product["source_capture_id"] for product in products if product["source_capture_id"]
+    }
+
+    linked_capture = store.get_capture(UUID(capture["id"]))
+    assert linked_capture.confirmed is False
+    assert linked_capture.product_snapshot is None
+
+
 def test_ask_outcome_note_creates_memory_drafts_instead_of_size_advice():
     get_store.cache_clear()
     get_memory_gateway.cache_clear()
@@ -177,7 +257,7 @@ def test_ask_outcome_note_creates_memory_drafts_instead_of_size_advice():
     memory = StubMemoryGateway()
     app.dependency_overrides[get_store] = lambda: store
     app.dependency_overrides[get_memory_gateway] = lambda: memory
-    client = TestClient(app)
+    client = make_test_client(app)
     product = store.list_products()[0]
 
     ask_response = client.post(
@@ -210,7 +290,7 @@ def test_ask_uses_unique_size_candidates_for_calibration_size():
     memory = StubMemoryGateway()
     app.dependency_overrides[get_store] = lambda: store
     app.dependency_overrides[get_memory_gateway] = lambda: memory
-    client = TestClient(app)
+    client = make_test_client(app)
     product = store.save_product(
         ProductSnapshot(
             brand="The Bear House",
@@ -256,7 +336,7 @@ def test_ask_memory_clear_removes_saved_rows_and_private_index():
     memory = StubMemoryGateway()
     app.dependency_overrides[get_store] = lambda: store
     app.dependency_overrides[get_memory_gateway] = lambda: memory
-    client = TestClient(app)
+    client = make_test_client(app)
     product = store.list_products()[0]
 
     ask_response = client.post(

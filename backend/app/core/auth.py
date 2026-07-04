@@ -22,7 +22,7 @@ _jwks_clients: dict[str, PyJWKClient] = {}
 
 
 def auth_enabled(settings: Settings) -> bool:
-    return settings.auth_required or bool(settings.clerk_jwks_url)
+    return settings.auth_required
 
 
 def local_auth_context() -> AuthContext:

@@ -108,8 +108,8 @@ body {
   margin: 0;
   color: rgb(var(--foreground));
   background:
-    radial-gradient(circle at 62% -20%, rgba(var(--violet-mist), 0.16), transparent 34rem),
-    radial-gradient(circle at 15% 18%, rgba(var(--icy), 0.12), transparent 28rem),
+    radial-gradient(circle at 62% -20%, rgb(var(--violet-mist) / 0.16), transparent 34rem),
+    radial-gradient(circle at 15% 18%, rgb(var(--icy) / 0.12), transparent 28rem),
     rgb(var(--background));
   font-feature-settings: "ss01", "cv11";
   text-rendering: optimizeLegibility;
@@ -136,9 +136,9 @@ select {
   content: "";
   background:
     radial-gradient(ellipse at 72% 18%, rgba(255, 255, 255, 0.72), transparent 24rem),
-    radial-gradient(ellipse at 34% 26%, rgba(var(--icy), 0.11), transparent 26rem),
-    linear-gradient(135deg, rgba(var(--violet-mist), 0.1), transparent 38%),
-    linear-gradient(180deg, rgb(var(--background)), rgba(var(--background), 0.9));
+    radial-gradient(ellipse at 34% 26%, rgb(var(--icy) / 0.11), transparent 26rem),
+    linear-gradient(135deg, rgb(var(--violet-mist) / 0.1), transparent 38%),
+    linear-gradient(180deg, rgb(var(--background)), rgb(var(--background) / 0.9));
 }
 
 .ambient-grid {
@@ -148,9 +148,9 @@ select {
   pointer-events: none;
   opacity: 0.22;
   background-image:
-    radial-gradient(circle, rgba(var(--foreground), 0.2) 0.65px, transparent 1.2px),
-    radial-gradient(ellipse at 70% 20%, rgba(var(--silver), 0.12), transparent 34rem),
-    radial-gradient(ellipse at 36% 20%, rgba(var(--icy), 0.12), transparent 25rem);
+    radial-gradient(circle, rgb(var(--foreground) / 0.2) 0.65px, transparent 1.2px),
+    radial-gradient(ellipse at 70% 20%, rgb(var(--silver) / 0.12), transparent 34rem),
+    radial-gradient(ellipse at 36% 20%, rgb(var(--icy) / 0.12), transparent 25rem);
   background-position:
     0 0,
     0 0,
@@ -168,39 +168,21 @@ select {
   content: "";
   opacity: 0.46;
   background:
-    radial-gradient(ellipse at 52% 30%, rgba(var(--silver), 0.2), transparent 22rem),
-    conic-gradient(from 160deg at 58% 30%, transparent, rgba(var(--ivory), 0.12), transparent 26%);
+    radial-gradient(ellipse at 52% 30%, rgb(var(--silver) / 0.2), transparent 22rem),
+    conic-gradient(from 160deg at 58% 30%, transparent, rgb(var(--ivory) / 0.12), transparent 26%);
   filter: blur(28px);
   animation: drift 24s ease-in-out infinite;
-}
-
-.surface-card {
-  border-color: rgba(var(--border), 0.72);
-  background: rgba(var(--card), 0.72);
-  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.12);
-  backdrop-filter: blur(22px);
 }
 
 .font-display {
   font-family: "Fraunces", ui-serif, Georgia, serif;
 }
 
-.brand-orb {
-  border: 1px solid rgba(var(--ivory), 0.16);
-  background:
-    radial-gradient(circle at 50% 50%, rgba(var(--ivory), 0.42), transparent 34%),
-    rgba(var(--card), 0.72);
-  box-shadow:
-    inset 0 1px 0 rgba(var(--ivory), 0.16),
-    0 18px 44px rgba(var(--violet-mist), 0.22);
-  backdrop-filter: blur(18px) saturate(140%);
-}
-
 .glass-panel {
-  border: 1px solid rgba(var(--border), 0.58);
+  border: 1px solid rgb(var(--border) / 0.58);
   background:
-    linear-gradient(150deg, rgba(255, 255, 255, 0.68), rgba(255, 255, 255, 0.28) 58%, rgba(var(--violet-mist), 0.06)),
-    rgba(var(--card), 0.72);
+    linear-gradient(150deg, rgba(255, 255, 255, 0.68), rgba(255, 255, 255, 0.28) 58%, rgb(var(--violet-mist) / 0.06)),
+    rgb(var(--card) / 0.72);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.72),
     0 30px 80px -38px rgba(35, 31, 45, 0.36);
@@ -208,63 +190,95 @@ select {
 }
 
 .glass-chip {
-  border: 1px solid rgba(var(--border), 0.54);
-  background: rgba(var(--card), 0.54);
+  border: 1px solid rgb(var(--border) / 0.54);
+  background: rgb(var(--card) / 0.54);
   backdrop-filter: blur(14px);
+}
+
+.mizaaj-brand-chip {
+  border: 1px solid rgb(245 241 232 / 0.12);
+  background: rgb(13 15 25 / 0.72);
+  box-shadow:
+    inset 0 1px 0 rgb(245 241 232 / 0.1),
+    0 16px 34px -22px rgba(0, 0, 0, 0.82);
+  backdrop-filter: blur(14px) saturate(135%);
+}
+
+.mizaaj-mark-glow {
+  background: linear-gradient(
+    135deg,
+    rgb(245 241 232 / 0.72),
+    rgb(119 87 186 / 0.48) 52%,
+    rgb(167 203 232 / 0.5)
+  );
+  filter: blur(3px);
+}
+
+.mizaaj-mark-dot {
+  background: rgb(245 241 232);
+  box-shadow: 0 0 14px rgb(245 241 232 / 0.46);
+}
+
+.notification-surface {
+  border: 1px solid rgb(var(--border) / 0.58);
+  background:
+    linear-gradient(150deg, rgba(255, 255, 255, 0.68), rgba(255, 255, 255, 0.28) 58%, rgb(var(--violet-mist) / 0.06)),
+    rgb(var(--card) / 0.82);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.72),
+    0 30px 80px -38px rgba(35, 31, 45, 0.36);
+  backdrop-filter: blur(28px) saturate(140%);
 }
 
 .text-gradient {
   color: rgb(var(--foreground));
-  text-shadow: 0 18px 48px rgba(var(--violet-mist), 0.18);
-}
-
-.scrollbar-none {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
-
-.scrollbar-none::-webkit-scrollbar {
-  display: none;
+  text-shadow: 0 18px 48px rgb(var(--violet-mist) / 0.18);
 }
 
 .dark .app-shell::before {
   background:
-    radial-gradient(ellipse at 72% 18%, rgba(var(--ivory), 0.13), transparent 22rem),
-    radial-gradient(ellipse at 34% 26%, rgba(var(--icy), 0.1), transparent 26rem),
-    linear-gradient(135deg, rgba(var(--violet-mist), 0.16), transparent 38%),
-    linear-gradient(180deg, rgb(var(--background)), rgba(var(--background), 0.88));
+    radial-gradient(ellipse at 72% 18%, rgb(var(--ivory) / 0.13), transparent 22rem),
+    radial-gradient(ellipse at 34% 26%, rgb(var(--icy) / 0.1), transparent 26rem),
+    linear-gradient(135deg, rgb(var(--violet-mist) / 0.16), transparent 38%),
+    linear-gradient(180deg, rgb(var(--background)), rgb(var(--background) / 0.88));
 }
 
 .dark .ambient-grid {
   opacity: 0.38;
   background-image:
-    radial-gradient(circle, rgba(var(--ivory), 0.26) 0.65px, transparent 1.2px),
-    radial-gradient(ellipse at 70% 20%, rgba(var(--silver), 0.18), transparent 34rem),
-    radial-gradient(ellipse at 36% 20%, rgba(var(--icy), 0.1), transparent 25rem);
-}
-
-.dark .surface-card {
-  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.42);
+    radial-gradient(circle, rgb(var(--ivory) / 0.26) 0.65px, transparent 1.2px),
+    radial-gradient(ellipse at 70% 20%, rgb(var(--silver) / 0.18), transparent 34rem),
+    radial-gradient(ellipse at 36% 20%, rgb(var(--icy) / 0.1), transparent 25rem);
 }
 
 .dark .glass-panel {
-  border-color: rgba(var(--ivory), 0.1);
+  border-color: rgb(var(--ivory) / 0.1);
   background:
-    linear-gradient(150deg, rgba(var(--ivory), 0.06), rgba(var(--ivory), 0.02) 58%, rgba(var(--violet-mist), 0.05)),
-    rgba(var(--card), 0.56);
+    linear-gradient(150deg, rgb(var(--ivory) / 0.06), rgb(var(--ivory) / 0.02) 58%, rgb(var(--violet-mist) / 0.05)),
+    rgb(var(--card) / 0.56);
   box-shadow:
-    inset 0 1px 0 rgba(var(--ivory), 0.08),
+    inset 0 1px 0 rgb(var(--ivory) / 0.08),
     0 30px 80px -30px rgba(0, 0, 0, 0.72);
 }
 
 .dark .glass-chip {
-  border-color: rgba(var(--ivory), 0.12);
-  background: rgba(var(--ivory), 0.06);
+  border-color: rgb(var(--ivory) / 0.12);
+  background: rgb(var(--ivory) / 0.06);
+}
+
+.dark .notification-surface {
+  border-color: rgb(var(--ivory) / 0.1);
+  background:
+    linear-gradient(150deg, rgb(var(--ivory) / 0.06), rgb(var(--ivory) / 0.02) 58%, rgb(var(--violet-mist) / 0.05)),
+    rgb(var(--card) / 0.78);
+  box-shadow:
+    inset 0 1px 0 rgb(var(--ivory) / 0.08),
+    0 30px 80px -30px rgba(0, 0, 0, 0.72);
 }
 
 .dark .text-gradient {
   color: rgb(225 217 255);
-  text-shadow: 0 18px 48px rgba(var(--violet-mist), 0.24);
+  text-shadow: 0 18px 48px rgb(var(--violet-mist) / 0.24);
 }
 
 .soft-enter {

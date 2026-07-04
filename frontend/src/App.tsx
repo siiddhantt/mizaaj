@@ -4,7 +4,9 @@ import {
   Camera,
   ChevronDown,
   Check,
+  GitBranch,
   ImagePlus,
+  Menu,
   MessageCircle,
   MemoryStick,
   Moon,
@@ -18,7 +20,7 @@ import {
   UserRound,
   X,
 } from "lucide-react"
-import { type ChangeEvent, type ReactNode, useEffect, useMemo, useRef, useState } from "react"
+import { type ChangeEvent, lazy, type ReactNode, Suspense, useEffect, useMemo, useRef, useState } from "react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -60,6 +62,9 @@ import type {
 
 const localUserId = import.meta.env.VITE_USER_ID ?? "00000000-0000-4000-8000-000000000001"
 type AuthTokenProvider = () => Promise<string | null>
+const AssistantMarkdown = lazy(() =>
+  import("@/components/assistant-markdown").then((module) => ({ default: module.AssistantMarkdown })),
+)
 
 const navItems = [
   { id: "ask", label: "Ask", icon: Sparkles },
@@ -101,6 +106,20 @@ interface ChatMessage {
 const outcomeOptions: FitOutcome[] = ["kept", "returned", "exchanged"]
 const activeViewStorageKey = "mizaaj.activeView"
 const memoryProductRoutePrefix = "memory/product/"
+const profileSensitivitySuggestions = [
+  "shoulder tightness",
+  "chest cling",
+  "stomach cling",
+  "sleeves run long",
+  "fabric feels flimsy",
+  "prefers relaxed drape",
+]
+const profileContextSuggestions = [
+  "prefer clean minimal graphics",
+  "avoid cling around chest and stomach",
+  "like relaxed but not sloppy drape",
+  "check shoulder seam before buying",
+]
 
 function isAppView(value: string | null): value is AppView {
   return navItems.some((item) => item.id === value)
@@ -171,6 +190,7 @@ export function App({
   const [memoryCaptures, setMemoryCaptures] = useState<Record<string, CaptureResponse>>({})
   const [selectedProductId, setSelectedProductId] = useState("")
   const [memoryProductId, setMemoryProductId] = useState("")
+  const [navigationOpen, setNavigationOpen] = useState(false)
   const [askQuestion, setAskQuestion] = useState("")
   const [askContext, setAskContext] = useState("")
   const [askResponse, setAskResponse] = useState<AskFitResponse | null>(null)
@@ -298,9 +318,6 @@ export function App({
       setMemoryCaptures(Object.fromEntries(loadedCaptures.map((capture) => [capture.id, capture])))
       setSelectedProductId("")
       setStatus("Private memory loaded")
-      if (loadedSystemStatus?.memory_provider === "cognee_cloud") {
-        notifications.info("Cognee Cloud enabled", "Mizaaj will use your Cognee Cloud tenant for private recall.")
-      }
     })
   }
 
@@ -514,6 +531,7 @@ export function App({
     }
     if (captureAssets.length && !latestCapture) {
       setStatus("Extract item details first so Mizaaj can use the photos.")
+      notifications.info("Extract item details first so Mizaaj can use the photos.")
       return
     }
 
@@ -700,6 +718,7 @@ export function App({
     setActiveView(view)
     if (view !== "memory") setActiveMemoryProductKey("")
     if (view === "memory") setActiveMemoryProductKey("")
+    setNavigationOpen(false)
   }
 
   return (
@@ -708,20 +727,23 @@ export function App({
         <div className="ambient-grid" aria-hidden="true" />
         <header className="sticky top-0 z-30 border-b border-border/35 bg-background/70 backdrop-blur-2xl">
           <div className="mx-auto flex h-16 w-full max-w-[100dvw] items-center gap-3 px-3 sm:px-5 xl:px-8">
-            <div className="flex min-w-0 flex-1 items-center gap-3">
-              <div className="brand-orb grid size-9 shrink-0 place-items-center rounded-full sm:size-10">
-                <span className="size-2.5 rounded-full bg-primary shadow-[0_0_22px_rgba(var(--primary),0.9)]" />
-              </div>
-              <div className="min-w-0">
-                <h1 className="font-display truncate text-base font-normal sm:text-lg">Mizaaj</h1>
-                <p className="truncate text-xs text-muted-foreground sm:hidden">Private AI fit memory</p>
-                <p className="hidden truncate text-xs text-muted-foreground sm:block">{status}</p>
-              </div>
-            </div>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  aria-label="Open navigation"
+                  className="rounded-full lg:hidden"
+                  onClick={() => setNavigationOpen(true)}
+                >
+                  <Menu />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Menu</TooltipContent>
+            </Tooltip>
 
-            <div className="glass-chip hidden items-center rounded-full px-3 py-1.5 text-xs text-muted-foreground shadow-xs sm:flex">
-              <ShieldCheck className="mr-2 size-3.5 text-icy" />
-              {currentUser?.provider === "clerk" ? "Clerk secured" : "Local memory"}
+            <div className="flex min-w-0 flex-1 items-center gap-3">
+              <BrandMark />
             </div>
 
             {userMenu ? <div className="grid size-9 place-items-center">{userMenu}</div> : null}
@@ -742,10 +764,32 @@ export function App({
           </div>
         </header>
 
+        <Sheet open={navigationOpen} onOpenChange={setNavigationOpen}>
+          <SheetContent
+            side="left"
+            className="glass-panel h-[100dvh] w-[min(22rem,calc(100dvw-1rem))] gap-0 overflow-hidden border-border/55 p-0"
+          >
+            <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-3 pt-14">
+              <AppNavigation activeView={activeView} onSelect={navigateToView} compact />
+            </div>
+            <div className="shrink-0 p-4">
+              <a
+                href="https://github.com/siiddhantt"
+                target="_blank"
+                rel="noreferrer"
+                className="glass-chip flex items-center justify-center gap-2 rounded-2xl px-3 py-2 text-sm font-medium text-muted-foreground transition hover:text-foreground"
+              >
+                <GitBranch className="size-4" />
+                github.com/siiddhantt
+              </a>
+            </div>
+          </SheetContent>
+        </Sheet>
+
         <div
           className={cn(
             "grid w-full min-w-0 max-w-[100dvw] gap-5 px-3 pt-4 sm:px-5 lg:min-h-[calc(100dvh-5rem)] lg:grid-cols-[14rem_minmax(0,1fr)] lg:pb-6 lg:px-8 2xl:grid-cols-[16rem_minmax(0,1fr)]",
-            activeView === "ask" ? "pb-16" : "pb-20",
+            activeView === "ask" ? "pb-5 sm:pb-6" : "pb-8",
           )}
         >
           <aside className="hidden lg:block">
@@ -858,23 +902,6 @@ export function App({
 
         </div>
 
-        <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-border/50 bg-background/92 px-2 py-2 shadow-[0_-12px_35px_rgba(0,0,0,0.08)] backdrop-blur-xl lg:hidden">
-          <div className="grid grid-cols-4 gap-1">
-            {navItems.map((item) => (
-              <button
-                key={item.id}
-                className={cn(
-                  "flex h-14 min-w-0 flex-col items-center justify-center gap-1 rounded-2xl px-1 text-[11px] font-medium text-muted-foreground transition-colors max-[340px]:h-12",
-                  activeView === item.id && "bg-primary/12 text-primary",
-                )}
-                onClick={() => navigateToView(item.id)}
-              >
-                <item.icon className="size-4" />
-                <span className="max-w-full truncate max-[340px]:sr-only">{item.label}</span>
-              </button>
-            ))}
-          </div>
-        </nav>
         <NotificationStack notifications={notifications.notifications} onDismiss={notifications.dismiss} />
       </main>
     </TooltipProvider>
@@ -890,32 +917,58 @@ function AppNavigation({
   onSelect: (view: AppView) => void
   compact?: boolean
 }) {
+  const items = (
+    <div className="space-y-1">
+      {navItems.map((item) => (
+        <button
+          key={item.id}
+          className={cn(
+            "flex h-11 w-full items-center gap-3 rounded-2xl px-3 text-left text-sm font-medium text-muted-foreground transition-colors",
+            compact && "h-12 rounded-[1.35rem] px-4",
+            activeView === item.id
+              ? "bg-primary/12 text-primary"
+              : "hover:bg-accent/70 hover:text-accent-foreground",
+          )}
+          onClick={() => onSelect(item.id)}
+        >
+          <item.icon className="size-4" />
+          {item.label}
+        </button>
+      ))}
+    </div>
+  )
+
+  if (compact) {
+    return items
+  }
+
   return (
-    <Card className={cn("glass-panel rounded-[1.75rem] border-border/55 bg-card/78 shadow-sm", compact && "border-0 shadow-none")}>
-      {!compact ? (
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm">Workspace</CardTitle>
-          <CardDescription>Private fit memory</CardDescription>
-        </CardHeader>
-      ) : null}
-      <CardContent className="space-y-1 px-3 pb-3">
-        {navItems.map((item) => (
-          <button
-            key={item.id}
-            className={cn(
-              "flex h-11 w-full items-center gap-3 rounded-2xl px-3 text-left text-sm font-medium text-muted-foreground transition-colors",
-              activeView === item.id
-                ? "bg-primary/12 text-primary"
-                : "hover:bg-accent/70 hover:text-accent-foreground",
-            )}
-            onClick={() => onSelect(item.id)}
-          >
-            <item.icon className="size-4" />
-            {item.label}
-          </button>
-        ))}
-      </CardContent>
+    <Card className="glass-panel rounded-[1.75rem] border-border/55 bg-card/78 shadow-sm">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-sm">Workspace</CardTitle>
+        <CardDescription>Private fit memory</CardDescription>
+      </CardHeader>
+      <CardContent className="px-3 pb-3">{items}</CardContent>
     </Card>
+  )
+}
+
+function BrandMark() {
+  return (
+    <div className="flex min-w-0 items-center gap-2.5">
+      <span className="mizaaj-brand-chip relative flex size-8 shrink-0 items-center justify-center rounded-full">
+        <span className="mizaaj-mark-glow absolute inset-1 rounded-full" />
+        <span className="mizaaj-mark-dot relative size-2 rounded-full" />
+      </span>
+      <span className="min-w-0">
+        <span className="block truncate font-display text-xl font-normal leading-none tracking-tight text-foreground">
+          Mizaaj
+        </span>
+        <span className="mt-1 block truncate text-xs font-normal italic leading-none text-muted-foreground sm:text-sm">
+          Your taste, remembered.
+        </span>
+      </span>
+    </div>
   )
 }
 
@@ -1033,7 +1086,7 @@ function AskView({
 
   return (
     <div className="mx-auto w-full max-w-6xl">
-      <section className="glass-panel flex h-[calc(100dvh-10rem)] min-h-0 min-w-0 flex-col overflow-hidden rounded-[1.75rem] sm:h-[calc(100dvh-7rem)] sm:rounded-[2.25rem] lg:h-[calc(100dvh-5.5rem)]">
+      <section className="glass-panel flex h-[calc(100dvh-6.5rem)] min-h-0 min-w-0 flex-col overflow-hidden rounded-[1.75rem] sm:h-[calc(100dvh-7rem)] sm:rounded-[2.25rem] lg:h-[calc(100dvh-7rem)]">
         <div
           className={cn(
             "shrink-0 border-b border-border/45 px-4 sm:px-6",
@@ -1052,11 +1105,11 @@ function AskView({
               </h2>
               <p
                 className={cn(
-                  "mt-1 hidden max-w-2xl text-sm leading-6 text-muted-foreground sm:block",
+                  "mt-1 hidden max-w-2xl font-display text-sm italic leading-6 text-muted-foreground sm:block",
                   hasConversation && "lg:hidden",
                 )}
               >
-                Get fit advice from your saved taste, try-on history, and any item evidence you attach.
+                Your taste remembers what size charts forget.
               </p>
             </div>
             <div className="grid w-full min-w-0 grid-cols-2 gap-2 sm:w-auto sm:grid-cols-none sm:flex sm:flex-wrap sm:items-center sm:justify-end">
@@ -1087,28 +1140,28 @@ function AskView({
             </div>
           </div>
           {showAttachmentStatus || latestCapture ? (
-          <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground sm:mt-4">
-            {showAttachmentStatus ? (
-              <span className="glass-chip rounded-full px-3 py-1.5">{attachmentStatus}</span>
-            ) : null}
-            {canExtractAttachment ? (
-              <Button
-                size="sm"
-                variant="outline"
-                className="h-8 rounded-full bg-background/35 px-3 text-xs"
-                onClick={() => void extractCapture()}
-                disabled={extractingCapture || uploadingCount > 0}
-              >
-                <Sparkles className="size-3.5" />
-                {extractingCapture ? "Extracting..." : "Extract item details"}
-              </Button>
-            ) : null}
-            {latestCapture && !latestCapture.confirmed ? (
-              <span className="glass-chip rounded-full px-3 py-1.5 text-icy">
-                Temporary item context
-              </span>
-            ) : null}
-          </div>
+            <div className="mt-2 flex min-w-0 flex-wrap items-center gap-2 text-xs text-muted-foreground sm:mt-4">
+              {showAttachmentStatus ? (
+                <span className="glass-chip max-w-full truncate rounded-full px-3 py-1.5">{attachmentStatus}</span>
+              ) : null}
+              {canExtractAttachment ? (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-8 max-w-full rounded-full bg-background/35 px-3 text-xs"
+                  onClick={() => void extractCapture()}
+                  disabled={extractingCapture || uploadingCount > 0}
+                >
+                  <Sparkles className="size-3.5" />
+                  <span className="truncate">{extractingCapture ? "Extracting..." : "Extract item details"}</span>
+                </Button>
+              ) : null}
+              {latestCapture && !latestCapture.confirmed ? (
+                <span className="glass-chip max-w-full truncate rounded-full px-3 py-1.5 text-icy">
+                  Temporary item context
+                </span>
+              ) : null}
+            </div>
           ) : null}
           {captureAttachments.length && !hasConversation ? (
             <AskAttachmentTray
@@ -1137,11 +1190,11 @@ function AskView({
           ) : (
             <div
               className={cn(
-                "grid h-full min-h-0 place-items-center rounded-[1.5rem] border border-dashed border-border/60 bg-background/18 p-4 text-center sm:min-h-[20rem] sm:p-6",
+                "grid h-full min-h-0 place-items-center overflow-hidden rounded-[1.5rem] border border-dashed border-border/60 bg-background/18 px-4 py-6 text-center sm:min-h-[20rem] sm:p-6",
                 hasDraftQuestion && "max-sm:hidden",
               )}
             >
-              <div>
+              <div className="min-w-0">
                 <div className="mx-auto mb-3 grid size-10 place-items-center rounded-full bg-primary/10 text-primary sm:mb-4 sm:size-12">
                   <MessageCircle className="size-4 sm:size-5" />
                 </div>
@@ -1150,11 +1203,11 @@ function AskView({
                   Ask about size, drape, fabric feel, or what Mizaaj should remember.
                 </p>
                 {!hasDraftQuestion ? (
-                  <div className="scrollbar-none mx-auto mt-3 flex max-w-sm flex-wrap justify-center gap-1.5 max-[430px]:hidden sm:mt-5">
+                  <div className="mx-auto mt-4 flex max-w-[min(30rem,100%)] flex-wrap justify-center gap-2 max-[430px]:hidden sm:mt-5">
                     {prompts.map((prompt) => (
                       <button
                         key={prompt}
-                        className="h-6 rounded-full border border-border/55 bg-background/45 px-2 text-left text-[10px] font-medium leading-none text-muted-foreground backdrop-blur transition-colors hover:border-primary/35 hover:text-foreground sm:h-7 sm:px-2.5 sm:text-[11px]"
+                        className="min-h-7 max-w-full rounded-full border border-border/55 bg-background/45 px-3 py-1 text-center text-xs font-medium leading-tight text-muted-foreground backdrop-blur transition-colors hover:border-primary/35 hover:text-foreground"
                         onClick={() => {
                           void ask(prompt)
                         }}
@@ -1177,7 +1230,7 @@ function AskView({
           <div ref={messagesEndRef} />
         </div>
 
-        <div className="relative shrink-0 bg-gradient-to-t from-background/88 via-background/55 to-transparent px-3 pb-[calc(env(safe-area-inset-bottom)+0.65rem)] pt-4 backdrop-blur-xl sm:px-5 sm:pb-5 sm:pt-6 lg:px-8">
+        <div className="relative shrink-0 bg-gradient-to-t from-background/92 via-background/58 to-transparent px-3 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-4 backdrop-blur-xl sm:px-5 sm:pb-5 sm:pt-6 lg:px-8">
           <div className="mx-auto w-full max-w-5xl">
             <div className="flex min-w-0 items-end gap-2 rounded-[2rem] border border-border/55 bg-card/78 p-1.5 shadow-xl shadow-black/12 backdrop-blur-2xl sm:p-2">
               <textarea
@@ -1212,14 +1265,17 @@ function AskView({
       </section>
 
       <Sheet open={memorySheetOpen} onOpenChange={setMemorySheetOpen}>
-        <SheetContent className="glass-panel w-full overflow-y-auto border-border/55 p-0 sm:max-w-lg" side="right">
-          <SheetHeader className="border-b border-border/50 p-5">
+        <SheetContent
+          className="glass-panel h-[100dvh] w-full gap-0 overflow-hidden border-border/55 p-0 sm:max-w-lg"
+          side="right"
+        >
+          <SheetHeader className="shrink-0 border-b border-border/50 p-5 pr-12">
             <SheetTitle>Remember from this chat</SheetTitle>
             <SheetDescription>
               Approve the facts worth recalling next time. Nothing becomes memory until you save it.
             </SheetDescription>
           </SheetHeader>
-          <div className="space-y-5 p-5">
+          <div className="min-h-0 flex-1 space-y-5 overflow-y-auto p-5">
             {response ? (
               <>
                 <div className="rounded-2xl border border-border/55 bg-background/35 p-3">
@@ -1311,7 +1367,7 @@ function AskView({
               <EmptyState icon={<MemoryStick />} title="No reply selected" detail="Ask Mizaaj first, then remember a reply." />
             )}
           </div>
-          <SheetFooter className="border-t border-border/50 p-5">
+          <SheetFooter className="shrink-0 border-t border-border/50 bg-background/92 p-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] backdrop-blur-xl sm:p-5">
             <Button
               className="w-full rounded-2xl"
               onClick={rememberDrafts}
@@ -1352,16 +1408,26 @@ function ChatBubble({
             Mizaaj
           </div>
         ) : null}
-        <p className="whitespace-pre-wrap">{message.content}</p>
+        {isUser ? (
+          <p className="whitespace-pre-wrap">{message.content}</p>
+        ) : (
+          <Suspense fallback={<p className="whitespace-pre-wrap">{message.content}</p>}>
+            <AssistantMarkdown content={message.content} />
+          </Suspense>
+        )}
         {message.response ? (
           <div className="mt-4 space-y-3">
-            <div className="flex flex-wrap gap-2">
+            <div className="flex min-w-0 flex-wrap gap-2">
               {message.response.evidence.slice(0, 4).map((item) => (
-                <Badge key={`${item.label}-${item.source}`} variant="outline" className="glass-chip rounded-full">
+                <Badge
+                  key={`${item.label}-${item.source}`}
+                  variant="outline"
+                  className="glass-chip max-w-full truncate rounded-full"
+                >
                   {formatEvidenceLabel(item)}
                 </Badge>
               ))}
-              <Badge variant="outline" className="glass-chip rounded-full">
+              <Badge variant="outline" className="glass-chip max-w-full truncate rounded-full">
                 {confidenceLabel(message.response.confidence)}
               </Badge>
             </div>
@@ -1569,98 +1635,214 @@ function ProfileView({
   updateSensitivities: (value: string) => void
   saveProfile: () => Promise<void>
 }) {
+  const memoryProvider = systemStatus?.memory_provider.replace("_", " ") ?? "memory"
+  const cloudEnabled = systemStatus?.memory_provider === "cognee_cloud"
+
+  function addSensitivity(value: string) {
+    setProfile((current) =>
+      current
+        ? {
+            ...current,
+            sensitivities: normalizeSensitivities([...current.sensitivities, value].join(", ")),
+          }
+        : current,
+    )
+  }
+
+  function addProfileContext(value: string) {
+    setProfile((current) => {
+      if (!current) return current
+      const currentNotes = current.body_notes?.trim()
+      if (currentNotes?.toLowerCase().includes(value.toLowerCase())) return current
+      return {
+        ...current,
+        body_notes: [currentNotes, value].filter(Boolean).join(", "),
+      }
+    })
+  }
+
   return (
-    <Card className="glass-panel mx-auto max-w-5xl rounded-[2rem] border-border/55 bg-card/70 shadow-sm">
-      <CardHeader>
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <CardTitle>Private fit profile</CardTitle>
-            <CardDescription>Body context, comfort flags, and silhouette notes.</CardDescription>
+    <div className="mx-auto max-w-6xl space-y-5">
+      <section className="glass-panel overflow-hidden rounded-[2rem] p-5 sm:p-6">
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+          <div className="max-w-2xl">
+            <Badge variant="outline" className="glass-chip w-fit rounded-full px-3 py-1">
+              <ShieldCheck className="size-3.5" />
+              Private to your account
+            </Badge>
+            <h2 className="mt-5 font-display text-4xl font-normal leading-tight text-gradient sm:text-5xl">
+              Build your fit taste.
+            </h2>
+            <p className="mt-3 max-w-xl text-sm leading-6 text-muted-foreground sm:text-base">
+              Add the body context and comfort signals Mizaaj should weigh before it answers size,
+              silhouette, fabric, and try-on questions.
+            </p>
           </div>
-          <Badge variant="secondary" className="rounded-full">
-            Private
-          </Badge>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="grid gap-4 md:grid-cols-2">
-          <Field label="Display name" htmlFor="display-name">
-            <Input
-              id="display-name"
-              value={profile.display_name}
-              onChange={(event) =>
-                setProfile((current) =>
-                  current ? { ...current, display_name: event.target.value } : current,
-                )
-              }
-            />
-          </Field>
-          <Field label="Height" htmlFor="height">
-            <Input
-              id="height"
-              type="number"
-              value={profile.height_cm ?? ""}
-              onChange={(event) =>
-                setProfile((current) =>
-                  current ? { ...current, height_cm: Number(event.target.value) || null } : current,
-                )
-              }
-            />
-          </Field>
-        </div>
-        <Field label="Sensitivities" htmlFor="sensitivities">
-          <Textarea
-            id="sensitivities"
-            value={profile.sensitivities.join(", ")}
-            onChange={(event) => updateSensitivities(event.target.value)}
-            className="min-h-28"
-          />
-        </Field>
-        <Button onClick={saveProfile}>
-          <Check />
-          Save profile
-        </Button>
-        {systemStatus ? (
-          <div className="grid gap-3 border-t border-border/45 pt-4 md:grid-cols-2">
+          <div className="grid gap-2 sm:min-w-72 sm:grid-cols-2 lg:grid-cols-1">
             <div className="rounded-[1.5rem] border border-border/55 bg-background/35 p-4">
-              <p className="text-sm font-medium">Cognee memory</p>
-              <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                {systemStatus.memory_provider === "cognee_cloud"
-                  ? "Cloud recall is enabled for faster hosted memory."
-                  : "Local recall is enabled for development and OSS fallback."}
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Recall engine</p>
+              <p className="mt-2 text-lg font-semibold capitalize">{memoryProvider}</p>
+            </div>
+            <div className="rounded-[1.5rem] border border-border/55 bg-background/35 p-4">
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Saved signals</p>
+              <p className="mt-2 text-lg font-semibold">{profile.sensitivities.length}</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,1.35fr)_minmax(20rem,0.65fr)]">
+        <section className="glass-panel rounded-[2rem] p-5 sm:p-6">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <h3 className="text-xl font-semibold">Fit profile</h3>
+              <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                Keep this lightweight. Mizaaj gets sharper when outcomes and saved chats add evidence later.
               </p>
-              <div className="mt-3 flex flex-wrap gap-2">
-                <Badge variant="outline" className="glass-chip rounded-full">
-                  {systemStatus.memory_provider.replace("_", " ")}
-                </Badge>
-                {systemStatus.memory_provider === "cognee_cloud" ? (
-                  <Badge
-                    variant={systemStatus.cognee_cloud_configured ? "secondary" : "outline"}
-                    className="rounded-full"
+            </div>
+            <Button onClick={saveProfile} className="w-full rounded-full sm:w-auto">
+              <Check />
+              Save profile
+            </Button>
+          </div>
+
+          <div className="mt-6 grid gap-4 md:grid-cols-2">
+            <Field label="Display name" htmlFor="display-name">
+              <Input
+                id="display-name"
+                value={profile.display_name}
+                placeholder="Sid"
+                onChange={(event) =>
+                  setProfile((current) =>
+                    current ? { ...current, display_name: event.target.value } : current,
+                  )
+                }
+              />
+            </Field>
+            <Field label="Height" htmlFor="height">
+              <Input
+                id="height"
+                type="number"
+                value={profile.height_cm ?? ""}
+                placeholder="Height in cm"
+                onChange={(event) =>
+                  setProfile((current) =>
+                    current ? { ...current, height_cm: Number(event.target.value) || null } : current,
+                  )
+                }
+              />
+            </Field>
+          </div>
+
+          <div className="mt-5 space-y-3">
+            <Field label="Fit signals Mizaaj should remember" htmlFor="sensitivities">
+              <Textarea
+                id="sensitivities"
+                value={profile.sensitivities.join(", ")}
+                onChange={(event) => updateSensitivities(event.target.value)}
+                placeholder="Example: avoid clingy chest fit, prefer relaxed shoulders, check sleeve length..."
+                className="min-h-32 rounded-[1.5rem]"
+              />
+            </Field>
+            <div className="flex flex-wrap gap-2">
+              {profileSensitivitySuggestions.map((suggestion) => {
+                const selected = profile.sensitivities.includes(suggestion)
+                return (
+                  <button
+                    key={suggestion}
+                    type="button"
+                    onClick={() => addSensitivity(suggestion)}
+                    disabled={selected}
+                    className={cn(
+                      "rounded-full border border-border/60 bg-background/35 px-3 py-1.5 text-xs font-medium text-muted-foreground transition hover:border-primary/45 hover:text-foreground disabled:cursor-default disabled:border-primary/35 disabled:bg-primary/15 disabled:text-foreground",
+                    )}
                   >
-                    {systemStatus.cognee_cloud_configured ? "Configured" : "Missing credentials"}
-                  </Badge>
-                ) : null}
+                    {suggestion}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          <div className="mt-5 space-y-3">
+            <Field label="Personal context" htmlFor="body-notes">
+              <Textarea
+                id="body-notes"
+                value={profile.body_notes ?? ""}
+                onChange={(event) =>
+                  setProfile((current) =>
+                    current ? { ...current, body_notes: event.target.value } : current,
+                  )
+                }
+                placeholder="Example: I like black tees with subtle artwork, relaxed drape, and no cling around chest or stomach."
+                className="min-h-28 rounded-[1.5rem]"
+              />
+            </Field>
+            <div className="flex flex-wrap gap-2">
+              {profileContextSuggestions.map((suggestion) => {
+                const selected = profile.body_notes?.toLowerCase().includes(suggestion.toLowerCase()) ?? false
+                return (
+                  <button
+                    key={suggestion}
+                    type="button"
+                    onClick={() => addProfileContext(suggestion)}
+                    disabled={selected}
+                    className="rounded-full border border-border/60 bg-background/35 px-3 py-1.5 text-xs font-medium text-muted-foreground transition hover:border-primary/45 hover:text-foreground disabled:cursor-default disabled:border-primary/35 disabled:bg-primary/15 disabled:text-foreground"
+                  >
+                    {suggestion}
+                  </button>
+                )
+              })}
+            </div>
+            <p className="text-xs leading-5 text-muted-foreground">
+              Saved context is indexed into private memory and used as a guardrail for future fit answers.
+            </p>
+          </div>
+        </section>
+
+        <aside className="space-y-4">
+          <section className="glass-panel rounded-[2rem] p-5">
+            <div className="flex items-center gap-3">
+              <span className="grid size-11 place-items-center rounded-full bg-primary/15 text-primary">
+                <MemoryStick className="size-5" />
+              </span>
+              <div>
+                <p className="text-sm font-semibold">Cognee memory</p>
+                <p className="text-xs text-muted-foreground">
+                  {cloudEnabled ? "Cloud graph recall is active." : "Local recall fallback is active."}
+                </p>
               </div>
             </div>
-            <div className="rounded-[1.5rem] border border-border/55 bg-background/35 p-4">
-              <p className="text-sm font-medium">Usage</p>
-              {systemStatus.cloud_usage ? (
-                <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                  Cognee Cloud is usage-based at $
-                  {systemStatus.cloud_usage.token_price_usd_per_million.toFixed(2)} per 1M processed tokens.
-                  Live credit balance stays in the Cognee billing dashboard.
-                </p>
-              ) : (
-                <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                  Local Cognee does not spend Cognee Cloud credits. OpenRouter usage still applies for extraction and local LLM recall.
-                </p>
-              )}
+            <div className="mt-4 flex flex-wrap gap-2">
+              <Badge variant="outline" className="glass-chip rounded-full capitalize">
+                {memoryProvider}
+              </Badge>
+              {systemStatus ? (
+                <Badge
+                  variant={!cloudEnabled || systemStatus.cognee_cloud_configured ? "secondary" : "outline"}
+                  className="rounded-full"
+                >
+                  {cloudEnabled
+                    ? systemStatus.cognee_cloud_configured
+                      ? "Connected"
+                      : "Needs key"
+                    : "OSS fallback"}
+                </Badge>
+              ) : null}
             </div>
-          </div>
-        ) : null}
-      </CardContent>
-    </Card>
+          </section>
+
+          <section className="glass-panel rounded-[2rem] p-5">
+            <p className="text-sm font-semibold">Usage</p>
+            <p className="mt-2 text-sm leading-6 text-muted-foreground">
+              {systemStatus?.cloud_usage
+                ? "Cloud indexing and recall use Cognee credits; billing stays in the Cognee dashboard."
+                : "Local Cognee does not spend Cloud credits. Extraction and local recall can still use OpenRouter."}
+            </p>
+          </section>
+        </aside>
+      </div>
+    </div>
   )
 }
 
@@ -2702,6 +2884,8 @@ function formatEvidenceDetail(item: AskEvidence) {
   const raw = item.detail.trim()
   const extracted =
     matchFirst(raw, [
+      /chunk\s+\d+\s+of\s+document\s+[0-9a-f-]{24,}.*?:\s*["“]([\s\S]+?)["”](?:\s*$|\s+-\s+chunk)/i,
+      /['"]answer['"]:\s*['"]([\s\S]+?)['"]\s*,\s*['"]?(?:structured|source|score|metadata|raw)/,
       /['"]answer['"]:\s*['"](.+?)['"]/,
       /['"]text['"]:\s*['"](.+?)['"]/,
       /value['"]?:\s*['"](.+?)['"]/,
@@ -2710,10 +2894,13 @@ function formatEvidenceDetail(item: AskEvidence) {
     ]) ?? raw
 
   const clean = extracted
+    .split(/\bEvidence:\s*/i)[0]
     .replaceAll("\\n", " ")
     .replaceAll("\\'", "'")
     .replaceAll('\\"', '"')
     .replace(/\*\*/g, "")
+    .replace(/\b(?:document|data_id|chunk_id)\s*:?\s*[0-9a-f-]{24,}\b/gi, "")
+    .replace(/\bchunk\s+\d+\s+of\s+document\s+[0-9a-f-]{24,}:?/gi, "")
     .replace(/\b(kind|search_type|dataset_name|metadata|raw)=['"]?[^'"]*['"]?/g, "")
     .replace(/\s+/g, " ")
     .trim()

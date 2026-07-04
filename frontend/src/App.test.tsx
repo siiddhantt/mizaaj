@@ -236,6 +236,11 @@ describe("Mizaaj app", () => {
     uploadMocks.uploadCaptureFile.mockReset()
   })
 
+  async function navigateViaSidebar(name: RegExp) {
+    await userEvent.click(screen.getByRole("button", { name: /open navigation/i }))
+    await userEvent.click(await screen.findByRole("button", { name }))
+  }
+
   it("asks private fit memory and saves selected memory cards", async () => {
     render(<App />)
 
@@ -289,7 +294,7 @@ describe("Mizaaj app", () => {
     render(<App />)
 
     await waitFor(() => expect(apiMocks.getProfile).toHaveBeenCalledTimes(1))
-    await userEvent.click(screen.getAllByRole("button", { name: /^memory$/i })[0])
+    await navigateViaSidebar(/^memory$/i)
 
     expect(await screen.findByText("Products")).toBeInTheDocument()
     expect((await screen.findAllByText(/zara - linen shirt/i)).length).toBeGreaterThan(0)
@@ -335,7 +340,7 @@ describe("Mizaaj app", () => {
     expect(await screen.findByText("Extract item details first so Mizaaj can use the photos.")).toBeInTheDocument()
     expect(apiMocks.askMizaaj).not.toHaveBeenCalled()
 
-    await userEvent.click(screen.getByRole("button", { name: /extract item details/i }))
+    await userEvent.click(screen.getByRole("button", { name: /^extract item details$/i }))
 
     await waitFor(() => expect(apiMocks.createCapture).toHaveBeenCalledTimes(1))
     expect(await screen.findByText(/temporary item context/i)).toBeInTheDocument()
@@ -357,7 +362,7 @@ describe("Mizaaj app", () => {
     await waitFor(() => expect(apiMocks.getProfile).toHaveBeenCalledTimes(1))
     expect(screen.queryByText("Session flow")).not.toBeInTheDocument()
 
-    await userEvent.click(screen.getAllByRole("button", { name: /^capture$/i })[0])
+    await navigateViaSidebar(/^capture$/i)
     await userEvent.type(
       screen.getByLabelText(/product or order text/i),
       "Zara linen shirt. Sizes S M L.",
@@ -379,7 +384,7 @@ describe("Mizaaj app", () => {
     render(<App />)
 
     await waitFor(() => expect(apiMocks.getProfile).toHaveBeenCalledTimes(1))
-    await userEvent.click(screen.getAllByRole("button", { name: /^capture$/i })[0])
+    await navigateViaSidebar(/^capture$/i)
     await userEvent.click(screen.getByRole("button", { name: /extract draft/i }))
 
     expect(await screen.findAllByText("Add a photo, page URL, or product text first.")).not.toHaveLength(0)
@@ -404,7 +409,7 @@ describe("Mizaaj app", () => {
     render(<App />)
 
     await waitFor(() => expect(apiMocks.getProfile).toHaveBeenCalledTimes(1))
-    await userEvent.click(screen.getAllByRole("button", { name: /^capture$/i })[0])
+    await navigateViaSidebar(/^capture$/i)
 
     const galleryInput = screen.getByLabelText(/add images/i)
     await userEvent.upload(galleryInput, [
@@ -436,7 +441,7 @@ describe("Mizaaj app", () => {
     render(<App />)
 
     await waitFor(() => expect(apiMocks.getProfile).toHaveBeenCalledTimes(1))
-    await userEvent.click(screen.getAllByRole("button", { name: /^capture$/i })[0])
+    await navigateViaSidebar(/^capture$/i)
 
     await userEvent.upload(
       screen.getByLabelText(/take photo/i),
@@ -466,7 +471,7 @@ describe("Mizaaj app", () => {
     render(<App />)
 
     await waitFor(() => expect(apiMocks.getProfile).toHaveBeenCalledTimes(1))
-    await userEvent.click(screen.getAllByRole("button", { name: /^capture$/i })[0])
+    await navigateViaSidebar(/^capture$/i)
 
     await userEvent.upload(
       screen.getByLabelText(/take photo/i),

@@ -111,7 +111,7 @@ class InMemoryStore:
     def get_profile(self, user_id: UUID) -> FitProfile:
         profile = self.profiles.get(user_id)
         if profile is None:
-            profile = FitProfile(user_id=user_id, display_name="New shopper")
+            profile = FitProfile(user_id=user_id, display_name="My fit profile")
             self.profiles[user_id] = profile
         return profile
 
