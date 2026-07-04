@@ -141,18 +141,3 @@ npm run build
 
 Live provider smoke tests are available in `backend/scripts/live-smoke.ps1`. Use `-SpendTokens`
 only when you intentionally want to call configured LLM and memory providers.
-
-## Demo Story
-
-1. Upload a product screenshot, clothing tag, size chart, or try-on photo.
-2. Extract product facts into a reviewable draft.
-3. Ask Mizaaj what size to buy or what to watch for.
-4. Save the useful answer into memory and link it to the product.
-5. After wearing the item, save the real outcome.
-6. Ask again later and see the answer improve from your own private evidence.
-
-## Status
-
-Mizaaj is hackathon-ready as a private-first product prototype. Public aggregate brand memory,
-browser-extension capture, and monetization flows are intentionally left as future scope until the
-private memory loop is fully polished.
