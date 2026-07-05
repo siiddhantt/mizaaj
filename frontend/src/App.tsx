@@ -733,7 +733,7 @@ export function App({
                   variant="ghost"
                   size="icon"
                   aria-label="Open navigation"
-                  className="rounded-full lg:hidden"
+                  className="rounded-full min-[900px]:hidden"
                   onClick={() => setNavigationOpen(true)}
                 >
                   <Menu />
@@ -788,17 +788,17 @@ export function App({
 
         <div
           className={cn(
-            "grid w-full min-w-0 max-w-[100dvw] gap-5 px-3 pt-4 sm:px-5 lg:min-h-[calc(100dvh-5rem)] lg:grid-cols-[14rem_minmax(0,1fr)] lg:pb-6 lg:px-8 2xl:grid-cols-[16rem_minmax(0,1fr)]",
+            "grid w-full min-w-0 max-w-[100dvw] gap-5 px-3 pt-4 sm:px-5 min-[900px]:min-h-[calc(100dvh-5rem)] min-[900px]:grid-cols-[14rem_minmax(0,1fr)] min-[900px]:pb-6 min-[900px]:px-8 2xl:grid-cols-[16rem_minmax(0,1fr)]",
             activeView === "ask" ? "pb-5 sm:pb-6" : "pb-8",
           )}
         >
-          <aside className="hidden lg:block">
+          <aside className="hidden min-[900px]:block">
             <div className="sticky top-20">
               <AppNavigation activeView={activeView} onSelect={navigateToView} />
             </div>
           </aside>
 
-          <section className="min-w-0 max-w-full space-y-5 lg:min-h-[calc(100dvh-6rem)]">
+          <section className="min-w-0 max-w-full space-y-5 min-[900px]:min-h-[calc(100dvh-6rem)]">
             {activeView === "ask" ? (
               <AskView
                 products={products}
@@ -1117,6 +1117,7 @@ function AskView({
                 id="ask-camera"
                 icon={<Camera />}
                 label="Take photo"
+                shortLabel="Photo"
                 capture="environment"
                 inputVersion={inputVersion}
                 onChange={handleFiles}
@@ -1125,6 +1126,7 @@ function AskView({
                 id="ask-gallery"
                 icon={<ImagePlus />}
                 label="Add images"
+                shortLabel="Images"
                 multiple
                 inputVersion={inputVersion}
                 onChange={handleFiles}
@@ -1135,7 +1137,8 @@ function AskView({
                 onClick={onCapture}
               >
                 <Plus />
-                Build memory
+                <span className="hidden min-[360px]:inline">Build memory</span>
+                <span className="min-[360px]:hidden">Memory</span>
               </Button>
             </div>
           </div>
@@ -1422,7 +1425,11 @@ function ChatBubble({
                 <Badge
                   key={`${item.label}-${item.source}`}
                   variant="outline"
-                  className="glass-chip max-w-full truncate rounded-full"
+                  className={cn(
+                    "glass-chip max-w-full truncate rounded-full",
+                    isAtlasEvidence(item) &&
+                      "border-icy/45 bg-icy/10 text-icy",
+                  )}
                 >
                   {formatEvidenceLabel(item)}
                 </Badge>
@@ -1473,6 +1480,7 @@ function CapturePillInput({
   id,
   icon,
   label,
+  shortLabel,
   multiple = false,
   capture,
   inputVersion,
@@ -1481,6 +1489,7 @@ function CapturePillInput({
   id: string
   icon: ReactNode
   label: string
+  shortLabel?: string
   multiple?: boolean
   capture?: "environment" | "user"
   inputVersion: number
@@ -1492,7 +1501,8 @@ function CapturePillInput({
       className="inline-flex h-10 min-w-0 cursor-pointer items-center justify-center gap-2 rounded-full border border-border bg-background/35 px-3 text-xs font-medium shadow-xs backdrop-blur transition-colors hover:bg-accent hover:text-accent-foreground sm:w-auto sm:shrink-0 sm:px-4 sm:text-sm"
     >
       {icon}
-      <span className="truncate">{label}</span>
+      <span className="hidden truncate min-[360px]:inline">{label}</span>
+      <span className="truncate min-[360px]:hidden">{shortLabel ?? label}</span>
       <input
         key={`${id}-${inputVersion}`}
         id={id}
@@ -2873,11 +2883,19 @@ function formatClaimSource(value: string) {
 function formatEvidenceLabel(item: AskEvidence) {
   const source = item.source.toLowerCase()
   const label = item.label.toLowerCase()
+  if (source.startsWith("mizaaj_atlas") || label.includes("atlas")) return "Mizaaj Atlas"
   if (source.includes("cognee") || label.includes("cognee")) return "Private memory"
   if (source.startsWith("purchase:")) return "Past outcome"
   if (source.startsWith("product:")) return "Current item"
   if (source.startsWith("profile:")) return "Fit profile"
   return item.label
+}
+
+function isAtlasEvidence(item: AskEvidence) {
+  return (
+    item.source.toLowerCase().startsWith("mizaaj_atlas") ||
+    item.label.toLowerCase().includes("atlas")
+  )
 }
 
 function formatEvidenceDetail(item: AskEvidence) {

@@ -4,6 +4,7 @@ from fastapi.testclient import TestClient
 
 from app.core.auth import local_auth_context
 from app.core.dependencies import (
+    get_atlas_gateway,
     get_auth_context,
     get_extraction_gateway,
     get_memory_gateway,
@@ -14,7 +15,7 @@ from app.domain.common import ClothingCategory
 from app.domain.products.schemas import ProductSnapshot
 from app.main import create_app
 from app.storage.in_memory import LOCAL_USER_ID, InMemoryStore
-from tests.stubs import StubExtractionGateway, StubMemoryGateway
+from tests.stubs import StubAtlasGateway, StubExtractionGateway, StubMemoryGateway
 
 
 def make_test_client(app):
@@ -30,6 +31,7 @@ def test_ask_api_returns_and_remembers_memory_drafts():
     memory = StubMemoryGateway()
     app.dependency_overrides[get_store] = lambda: store
     app.dependency_overrides[get_memory_gateway] = lambda: memory
+    app.dependency_overrides[get_atlas_gateway] = lambda: StubAtlasGateway()
     client = make_test_client(app)
     product = store.list_products()[0]
 

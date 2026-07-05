@@ -5,6 +5,8 @@ from fastapi import Depends, Request
 
 from app.core.auth import AuthContext, authenticate_request
 from app.core.config import Settings, get_settings
+from app.domain.atlas.factory import create_atlas_gateway
+from app.domain.atlas.gateway import AtlasGateway
 from app.domain.extraction.factory import create_extraction_gateway
 from app.domain.extraction.gateway import ExtractionGateway
 from app.domain.memory.factory import create_memory_gateway
@@ -23,6 +25,11 @@ def get_store() -> MizaajStore:
 @lru_cache
 def get_memory_gateway() -> MemoryGateway:
     return create_memory_gateway(get_settings())
+
+
+@lru_cache
+def get_atlas_gateway() -> AtlasGateway:
+    return create_atlas_gateway(get_settings())
 
 
 @lru_cache

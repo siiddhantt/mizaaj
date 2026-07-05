@@ -32,6 +32,7 @@ future fit questions.
 - Purchase outcome tracking for kept, returned, exchanged, and altered items.
 - Saved memory, product, capture, profile, and privacy CRUD APIs.
 - Local Cognee mode plus Cognee Cloud provider support.
+- Mizaaj Atlas: a source-labeled public fit-intelligence lane for first-time product guidance.
 - Optional Clerk authentication shell for account-based user isolation.
 
 ## Architecture
@@ -52,6 +53,7 @@ raw evidence -> extracted drafts -> confirmed product snapshots
 Provider boundaries are intentionally explicit:
 
 - `MemoryGateway`: Cognee local or Cognee Cloud.
+- `AtlasGateway`: local seed fallback or Cognee Cloud public Atlas recall.
 - `ExtractionGateway`: OpenRouter structured text/vision extraction.
 - `UploadGateway`: S3-compatible storage such as MinIO, S3, or R2.
 - `MizaajStore`: Postgres persistence with an in-memory test adapter.
@@ -102,6 +104,8 @@ S3_ENDPOINT_URL=http://localhost:9000
 S3_PUBLIC_BASE_URL=http://localhost:9000/mizaaj-uploads
 OPENROUTER_API_KEY=
 MEMORY_PROVIDER=cognee_local
+ATLAS_PROVIDER=seed
+ATLAS_DATASET_NAME=mizaaj_atlas_seed_v2
 COGNEE_DATASET_PREFIX=mizaaj_user
 ```
 

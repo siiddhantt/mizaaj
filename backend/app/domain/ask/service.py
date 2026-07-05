@@ -12,6 +12,8 @@ from app.domain.ask.schemas import (
     RememberMemoryDraftsResponse,
     SavedMemoryRecord,
 )
+from app.domain.atlas.gateway import AtlasGateway
+from app.domain.atlas.schemas import AtlasContext, AtlasRecallRequest
 from app.domain.common import FitOutcome
 from app.domain.memory.gateway import MemoryGateway
 from app.domain.memory.rebuilder import PrivateMemoryRebuilder
@@ -25,9 +27,15 @@ from app.storage.store import MizaajStore
 
 
 class AskFitService:
-    def __init__(self, store: MizaajStore, memory_gateway: MemoryGateway):
+    def __init__(
+        self,
+        store: MizaajStore,
+        memory_gateway: MemoryGateway,
+        atlas_gateway: AtlasGateway | None = None,
+    ):
         self.store = store
         self.memory_gateway = memory_gateway
+        self.atlas_gateway = atlas_gateway
 
     async def ask(self, request: AskFitRequest) -> AskFitResponse:
         profile = self.store.get_profile(request.user_id)
@@ -35,9 +43,10 @@ class AskFitService:
         self._assert_product_access(request.user_id, product)
         purchases = self.store.list_purchases(request.user_id)
         recalled = await self._recall(request, product)
+        atlas = await self._recall_atlas(request, product)
         related_purchases = self._related_purchases(purchases, product)
-        evidence = self._evidence(profile, product, related_purchases, recalled)
-        answer = self._answer(request, profile, product, related_purchases, recalled)
+        evidence = self._evidence(profile, product, related_purchases, recalled, atlas)
+        answer = self._answer(request, profile, product, related_purchases, recalled, atlas)
         drafts = self._drafts(request, profile, product, related_purchases, recalled)
 
         return AskFitResponse(
@@ -49,6 +58,7 @@ class AskFitService:
                 related_purchases,
                 recalled,
                 has_profile_signal=bool(self._profile_signal(profile)),
+                has_atlas_signal=bool(atlas.facts),
             ),
             evidence=evidence,
             recalled_facts=recalled.facts,
@@ -225,6 +235,19 @@ class AskFitService:
                 request.user_id, query, str(exc) or exc.__class__.__name__
             )
 
+    async def _recall_atlas(
+        self, request: AskFitRequest, product: ProductSnapshot | None
+    ) -> AtlasContext:
+        query = self._recall_query(request, product)
+        if self.atlas_gateway is None:
+            return AtlasContext.disabled(query)
+        try:
+            return await self.atlas_gateway.recall_public(
+                AtlasRecallRequest(query=query, top_k=min(4, request.top_k))
+            )
+        except Exception as exc:
+            return AtlasContext.degraded(query, str(exc) or exc.__class__.__name__)
+
     def _recall_query(self, request: AskFitRequest, product: ProductSnapshot | None) -> str:
         product_terms = []
         if product:
@@ -273,6 +296,7 @@ class AskFitService:
         product: ProductSnapshot | None,
         purchases: list[PurchaseRecord],
         recalled: MemoryContext,
+        atlas: AtlasContext,
     ) -> list[AskEvidence]:
         evidence: list[AskEvidence] = []
 
@@ -333,6 +357,14 @@ class AskFitService:
             )
             for fact in recalled.facts[:4]
         )
+        evidence.extend(
+            AskEvidence(
+                label="Mizaaj Atlas",
+                detail=self._clean_memory_text(fact.text),
+                source=fact.source,
+            )
+            for fact in atlas.facts[:3]
+        )
         return evidence
 
     def _answer(
@@ -342,8 +374,10 @@ class AskFitService:
         product: ProductSnapshot | None,
         purchases: list[PurchaseRecord],
         recalled: MemoryContext,
+        atlas: AtlasContext,
     ) -> str:
         profile_signal = self._profile_signal(profile)
+        atlas_signal = self._atlas_signal(atlas)
         if product is None:
             if purchases or recalled.facts or profile_signal:
                 signal = (
@@ -354,10 +388,19 @@ class AskFitService:
                     else profile_signal
                 )
                 if not self._asks_about_current_item(request.question):
-                    return f"From your saved memory: {signal}"
+                    answer = f"From your saved memory: {signal}"
+                    if atlas_signal:
+                        answer = f"{answer} Public Atlas evidence adds: {atlas_signal}"
+                    return answer
                 return (
                     "I can use your saved memory, but attach or extract the current item "
                     f"for a real size call. Most relevant signal: {signal}"
+                )
+            if atlas_signal:
+                return (
+                    "Mizaaj Atlas has public product and size-guide evidence, but I need a "
+                    "specific item or your saved fit memory for a personal call. "
+                    f"Public signal: {atlas_signal}"
                 )
             return (
                 "Attach item photos or save a try-on outcome first, then I can compare it with "
@@ -383,6 +426,7 @@ class AskFitService:
         profile_guardrail = (
             f" Keep your fit profile in mind: {profile_signal}." if profile_signal else ""
         )
+        atlas_guardrail = f" Public Atlas evidence adds: {atlas_signal}" if atlas_signal else ""
         qualifier = (
             "Start with"
             if purchases or recalled.facts
@@ -391,9 +435,9 @@ class AskFitService:
 
         return (
             f"{qualifier} {size or 'the most familiar size'} for {self._display_name(product)}. "
-            f"{purchase_signal}{memory_signal}{profile_guardrail} After trying it, save whether "
-            "the shoulder, chest, length, fabric feel, and silhouette matched what you wanted so "
-            "the next answer gets sharper."
+            f"{purchase_signal}{memory_signal}{profile_guardrail}{atlas_guardrail} "
+            "After trying it, save whether the shoulder, chest, length, fabric feel, and "
+            "silhouette matched what you wanted so the next answer gets sharper."
         )
 
     def _drafts(
@@ -522,6 +566,7 @@ class AskFitService:
         recalled: MemoryContext,
         *,
         has_profile_signal: bool = False,
+        has_atlas_signal: bool = False,
     ) -> float:
         value = 0.34 if product else (0.5 if recalled.facts or has_profile_signal else 0.22)
         if product and product.size_chart:
@@ -534,6 +579,8 @@ class AskFitService:
             value += min(0.22, len(recalled.facts) * 0.055)
         if has_profile_signal:
             value += 0.06
+        if has_atlas_signal:
+            value += 0.1 if product else 0.04
         return min(value, 0.9)
 
     def _asks_about_current_item(self, question: str) -> bool:
@@ -603,6 +650,11 @@ class AskFitService:
         if profile.body_notes and profile.body_notes.strip():
             signals.append(profile.body_notes.strip())
         return "; ".join(signals).strip()[:240].rstrip()
+
+    def _atlas_signal(self, atlas: AtlasContext) -> str:
+        if not atlas.facts:
+            return ""
+        return self._clean_memory_text(atlas.facts[0].text)[:260].rstrip()
 
     def _product_detail(self, product: ProductSnapshot) -> str:
         parts = [

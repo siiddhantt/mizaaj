@@ -79,7 +79,7 @@ Out of scope before submission unless all core items are done:
 
 - [x] Profile memory consistency.
   - [x] Updating profile should rebuild private Cognee memory.
-  - [ ] Profile UI should feel like onboarding, not a raw form.
+  - [x] Profile UI should feel like onboarding, not a raw form.
   - [x] Tests cover profile update and recall.
 
 - [ ] App-wide privacy controls.
@@ -93,7 +93,7 @@ Out of scope before submission unless all core items are done:
   - [x] Switch `.env` to `MEMORY_PROVIDER=cognee_cloud`.
   - [x] Confirm Cognee Cloud API key auth and dataset naming work.
   - [x] Run private remember/rebuild against Cognee Cloud credits.
-  - [ ] Run recall against Cognee Cloud from the app flow.
+  - [x] Run recall against Cognee Cloud from the app flow.
   - [ ] Run memory clear/rebuild against Cognee Cloud from the app flow.
   - [ ] Decide final demo default: local fallback plus cloud mode, or cloud primary.
 
@@ -105,11 +105,11 @@ Out of scope before submission unless all core items are done:
   - [x] Add a backend ingestion script that indexes Atlas seed files into Cognee Cloud.
   - [ ] Re-index the cleaned Atlas v2 seed into Cognee Cloud.
   - [ ] Directly smoke-test Atlas v2 recall against Cognee Cloud.
-  - [ ] Add a backend provider/service that recalls Atlas facts separately from private memories.
-  - [ ] Update Ask response shape to label `private_memory`, `current_item`, and `mizaaj_atlas` evidence.
-  - [ ] Add tests proving private and Atlas recall are separated and source-labeled.
-  - [ ] Add UI badges/sections for Atlas evidence without making answers cluttered.
-  - [ ] Manually smoke-test a new product where private memory is sparse but Atlas improves the answer.
+  - [x] Add a backend provider/service that recalls Atlas facts separately from private memories.
+  - [x] Update Ask response shape to label `private_memory`, `current_item`, and `mizaaj_atlas` evidence.
+  - [x] Add tests proving private and Atlas recall are separated and source-labeled.
+  - [x] Add UI badges/sections for Atlas evidence without making answers cluttered.
+  - [x] Manually smoke-test a new product where private memory is sparse but Atlas improves the answer.
 
 - [ ] Full API manual flow.
   - [x] Add fake-provider workflow test for the full private fit-memory path.
@@ -128,7 +128,7 @@ Out of scope before submission unless all core items are done:
 
 - [ ] Full mobile UI manual flow.
   - [ ] Phone camera upload with multiple photos.
-  - [ ] Ask screen does not clip on mobile or desktop.
+  - [x] Ask screen does not clip on mobile or desktop.
   - [ ] Capture screen does not clip on mobile or desktop.
   - [ ] Memory delete and clear controls work.
   - [ ] Loading states are visible for extraction, Cognee indexing, and deletes.

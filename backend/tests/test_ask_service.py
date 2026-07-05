@@ -7,11 +7,11 @@ from app.domain.ask.schemas import AskFitRequest, RememberMemoryDraftsRequest
 from app.domain.ask.service import AskFitService
 from app.domain.captures.schemas import CaptureResponse
 from app.domain.common import ClothingCategory
-from app.domain.memory.schemas import FitMemoryEntry, RecallFitContextRequest
+from app.domain.memory.schemas import FitMemoryEntry, MemoryContextFact, RecallFitContextRequest
 from app.domain.products.schemas import ProductDraft, ProductSnapshot, SizeLabel
 from app.domain.profiles.schemas import FitProfileUpdate
 from app.storage.in_memory import LOCAL_USER_ID, InMemoryStore
-from tests.stubs import StubMemoryGateway
+from tests.stubs import StubAtlasGateway, StubMemoryGateway
 
 OTHER_USER_ID = UUID("00000000-0000-4000-8000-000000000002")
 
@@ -98,6 +98,48 @@ async def test_ask_uses_profile_context_without_attached_item():
     assert "subtle artwork" in response.answer
     assert "chest cling" in response.answer
     assert response.confidence >= 0.5
+
+
+@pytest.mark.asyncio
+async def test_ask_labels_atlas_separately_from_private_memory():
+    store = InMemoryStore.seeded()
+    memory = StubMemoryGateway()
+    product = store.list_products()[0]
+    await memory.remember_private(
+        LOCAL_USER_ID,
+        FitMemoryEntry(
+            subject="private:uniqlo",
+            text="Private memory says Uniqlo M worked for shoulder width.",
+            tags=["brand:uniqlo", "category:shirt"],
+        ),
+    )
+    atlas = StubAtlasGateway(
+        [
+            MemoryContextFact(
+                text=(
+                    "Uniqlo Oxford shirt. Public Atlas evidence: material cotton; "
+                    "fit regular. Non-personal interpretation: check sleeve length."
+                ),
+                source="mizaaj_atlas:uniqlo_oxford",
+                score=4,
+            )
+        ]
+    )
+
+    response = await AskFitService(store, memory, atlas).ask(
+        AskFitRequest(
+            user_id=LOCAL_USER_ID,
+            product_id=product.id,
+            question="What should I check before buying this shirt?",
+        )
+    )
+
+    labels = {item.label for item in response.evidence}
+    assert "Private memory" in labels
+    assert "Mizaaj Atlas" in labels
+    assert any(item.source.startswith("mizaaj_atlas") for item in response.evidence)
+    assert "Public Atlas evidence adds" in response.answer
+    assert atlas.queries
 
 
 @pytest.mark.asyncio

@@ -5,12 +5,12 @@ FastAPI service for Mizaaj, a private-first clothing fit memory product powered 
 ## Local Setup
 
 ```bash
-cd mizaaj
+cd fitrecall
 docker compose up -d postgres minio minio-bucket
 ```
 
 ```bash
-cd mizaaj/backend
+cd fitrecall/backend
 uv python install 3.12
 uv sync --dev
 cp .env.example .env
@@ -35,6 +35,8 @@ flows that need those providers.
 - `STORE_PROVIDER=postgres`: persists profiles, captures, product snapshots, and purchases in Postgres.
 - `MEMORY_PROVIDER=cognee_local`: calls `cognee.remember` and `cognee.recall` against local Cognee.
 - `MEMORY_PROVIDER=cognee_cloud`: routes memory calls through Cognee Cloud.
+- `ATLAS_PROVIDER=seed`: recalls curated public Atlas records from `backend/data` for local demos.
+- `ATLAS_PROVIDER=cognee_cloud`: recalls the public Atlas dataset from Cognee Cloud.
 - `UPLOAD_PROVIDER=s3`: returns presigned PUT URLs for AWS S3, MinIO, R2, or compatible storage.
 - `EXTRACTION_PROVIDER=openrouter`: extracts reviewable product drafts with OpenRouter.
 

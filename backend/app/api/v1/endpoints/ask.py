@@ -3,7 +3,12 @@ from uuid import UUID
 from fastapi import APIRouter, Depends
 
 from app.core.auth import AuthContext, assert_current_user
-from app.core.dependencies import get_auth_context, get_memory_gateway, get_store
+from app.core.dependencies import (
+    get_atlas_gateway,
+    get_auth_context,
+    get_memory_gateway,
+    get_store,
+)
 from app.domain.ask.schemas import (
     AskFitRequest,
     AskFitResponse,
@@ -12,6 +17,7 @@ from app.domain.ask.schemas import (
     SavedMemoryRecord,
 )
 from app.domain.ask.service import AskFitService
+from app.domain.atlas.gateway import AtlasGateway
 from app.domain.memory.gateway import MemoryGateway
 from app.storage.store import MizaajStore
 
@@ -23,10 +29,11 @@ async def ask_mizaaj(
     payload: AskFitRequest,
     store: MizaajStore = Depends(get_store),
     memory: MemoryGateway = Depends(get_memory_gateway),
+    atlas: AtlasGateway = Depends(get_atlas_gateway),
     auth: AuthContext = Depends(get_auth_context),
 ) -> AskFitResponse:
     payload = payload.model_copy(update={"user_id": assert_current_user(payload.user_id, auth)})
-    return await AskFitService(store, memory).ask(payload)
+    return await AskFitService(store, memory, atlas).ask(payload)
 
 
 @router.post("/remember", response_model=RememberMemoryDraftsResponse)

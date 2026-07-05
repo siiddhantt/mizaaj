@@ -1,6 +1,7 @@
 from collections import defaultdict
 from uuid import UUID
 
+from app.domain.atlas.schemas import AtlasContext, AtlasRecallRequest
 from app.domain.captures.schemas import CaptureCreate
 from app.domain.claims import ExtractedClaim
 from app.domain.common import ClothingCategory
@@ -83,6 +84,16 @@ class StubMemoryGateway:
         self._entries[user_id] = [
             entry for entry in self._entries.get(user_id, []) if prefix not in entry.tags
         ]
+
+
+class StubAtlasGateway:
+    def __init__(self, facts: list[MemoryContextFact] | None = None):
+        self.facts = facts or []
+        self.queries: list[AtlasRecallRequest] = []
+
+    async def recall_public(self, request: AtlasRecallRequest) -> AtlasContext:
+        self.queries.append(request)
+        return AtlasContext(query=request.query, facts=self.facts[: request.top_k])
 
 
 class FailingMemoryGateway:
