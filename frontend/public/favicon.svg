@@ -1,0 +1,20 @@
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="glow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(26 23) rotate(45) scale(30)">
+      <stop stop-color="#F5F1E8" stop-opacity="0.86" />
+      <stop offset="0.52" stop-color="#7757BA" stop-opacity="0.58" />
+      <stop offset="1" stop-color="#A7CBE8" stop-opacity="0.5" />
+    </radialGradient>
+    <radialGradient id="shell" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(20 13) rotate(55) scale(58)">
+      <stop stop-color="#24273A" />
+      <stop offset="0.58" stop-color="#0D0F19" />
+      <stop offset="1" stop-color="#070810" />
+    </radialGradient>
+    <filter id="soft" x="0" y="0" width="64" height="64" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="8" stdDeviation="8" flood-color="#000000" flood-opacity="0.36" />
+    </filter>
+  </defs>
+  <circle cx="32" cy="32" r="27" fill="url(#shell)" stroke="#F5F1E8" stroke-opacity="0.14" stroke-width="1.5" filter="url(#soft)" />
+  <circle cx="32" cy="32" r="18" fill="url(#glow)" opacity="0.82" />
+  <circle cx="32" cy="32" r="7" fill="#F5F1E8" />
+</svg>
