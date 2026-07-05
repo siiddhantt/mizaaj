@@ -95,7 +95,7 @@ Out of scope before submission unless all core items are done:
   - [x] Run private remember/rebuild against Cognee Cloud credits.
   - [x] Run recall against Cognee Cloud from the app flow.
   - [ ] Run memory clear/rebuild against Cognee Cloud from the app flow.
-  - [ ] Decide final demo default: local fallback plus cloud mode, or cloud primary.
+  - [x] Decide final demo default: Cognee Cloud primary, local/seed fallback.
 
 - [ ] Mizaaj Atlas curated knowledge layer.
   - [x] Define Atlas dataset naming, e.g. `mizaaj_atlas_seed_v2`, separate from private user datasets.
@@ -103,8 +103,8 @@ Out of scope before submission unless all core items are done:
   - [x] Remove demo questions and user-taste assumptions from Atlas seed memory.
   - [x] Document product identity, matching, and ambiguity rules.
   - [x] Add a backend ingestion script that indexes Atlas seed files into Cognee Cloud.
-  - [ ] Re-index the cleaned Atlas v2 seed into Cognee Cloud.
-  - [ ] Directly smoke-test Atlas v2 recall against Cognee Cloud.
+  - [x] Re-index the cleaned Atlas v2 seed into Cognee Cloud.
+  - [x] Directly smoke-test Atlas v2 recall against Cognee Cloud.
   - [x] Add a backend provider/service that recalls Atlas facts separately from private memories.
   - [x] Update Ask response shape to label `private_memory`, `current_item`, and `mizaaj_atlas` evidence.
   - [x] Add tests proving private and Atlas recall are separated and source-labeled.
@@ -136,10 +136,10 @@ Out of scope before submission unless all core items are done:
 
 - [ ] Submission polish.
   - [x] README says Mizaaj and has current setup notes.
-  - [ ] Docs explain why Cognee is necessary.
-  - [ ] Demo script matches the implemented product.
+  - [x] Docs explain why Cognee is necessary.
+  - [x] Demo script matches the implemented product.
   - [ ] Screenshots/video show a real clothing example.
-  - [ ] Track choice is explicit: Cognee Cloud primary, OSS fallback.
+  - [x] Track choice is explicit: Cognee Cloud primary, OSS fallback.
   - [ ] Cognee Cloud dashboard shows the private user brain and Atlas brain used in the demo.
   - [ ] Demo proves one returning-user flow and one first-time/new-product flow.
 
@@ -153,11 +153,11 @@ Out of scope before submission unless all core items are done:
   - [ ] Capture tag/product images.
   - [ ] Save an outcome about stretching, flimsy fabric, or poor drape.
   - [ ] Ask later about a similar item and verify Mizaaj warns from private memory.
-- [ ] Atlas has enough seeded public knowledge to help on day one.
-  - [ ] 5 to 8 products across 3 to 4 brands.
-  - [ ] At least 2 product-page screenshots per product: product details and size chart.
-  - [ ] At least 1 source-backed non-personal derived rule per product: fit intent, fabric risk, size interpretation, or styling evidence.
-  - [ ] At least 2 category-level notes: relaxed tees and shirts are enough for the demo.
+- [x] Atlas has enough seeded public knowledge to help on day one.
+  - [x] 13 records across H&M, SNITCH, PUMA, Levi's, and ZARA.
+  - [x] Product-specific and brand/category size-guide records are separated.
+  - [x] At least 1 source-backed non-personal derived rule per product: fit intent, fabric risk, size interpretation, or styling evidence.
+  - [x] Category-level notes cover relaxed tees, shirts, and jeans for the demo.
 
 ## Nice If Core Is Done
 

@@ -1,13 +1,16 @@
 import argparse
 import asyncio
 import json
+import sys
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
 import httpx
 
-from app.core.config import get_settings
+BACKEND_ROOT = Path(__file__).resolve().parents[1]
+if str(BACKEND_ROOT) not in sys.path:
+    sys.path.insert(0, str(BACKEND_ROOT))
 
 DEFAULT_SEED_FILE = Path(__file__).resolve().parents[1] / "data" / "mizaaj_atlas_seed_v2.json"
 
@@ -93,6 +96,8 @@ async def seed_atlas(
     spend_credits: bool,
     forget_first: bool,
 ) -> None:
+    from app.core.config import get_settings
+
     settings = get_settings()
     if not settings.cognee_cloud_base_url or not settings.cognee_cloud_api_key:
         raise RuntimeError("COGNEE_CLOUD_BASE_URL and COGNEE_CLOUD_API_KEY are required.")

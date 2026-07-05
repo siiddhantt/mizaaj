@@ -32,7 +32,8 @@ future fit questions.
 - Purchase outcome tracking for kept, returned, exchanged, and altered items.
 - Saved memory, product, capture, profile, and privacy CRUD APIs.
 - Local Cognee mode plus Cognee Cloud provider support.
-- Mizaaj Atlas: a source-labeled public fit-intelligence lane for first-time product guidance.
+- Mizaaj Atlas: Cognee Cloud public fit intelligence seeded from source-labeled product pages and
+  size guides, with a local seed fallback.
 - Optional Clerk authentication shell for account-based user isolation.
 
 ## Architecture
@@ -109,6 +110,15 @@ ATLAS_DATASET_NAME=mizaaj_atlas_seed_v2
 COGNEE_DATASET_PREFIX=mizaaj_user
 ```
 
+For the hackathon demo, use Cognee Cloud as the primary memory path:
+
+```env
+MEMORY_PROVIDER=cognee_cloud
+ATLAS_PROVIDER=cognee_cloud
+COGNEE_CLOUD_BASE_URL=
+COGNEE_CLOUD_API_KEY=
+```
+
 Frontend values live in `frontend/.env`:
 
 ```env
@@ -145,3 +155,11 @@ npm run build
 
 Live provider smoke tests are available in `backend/scripts/live-smoke.ps1`. Use `-SpendTokens`
 only when you intentionally want to call configured LLM and memory providers.
+
+Atlas can be dry-run or indexed from the backend:
+
+```powershell
+cd backend
+uv run python scripts/seed_atlas.py
+uv run python scripts/seed_atlas.py --spend-credits --forget-first
+```

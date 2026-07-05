@@ -143,6 +143,54 @@ async def test_ask_labels_atlas_separately_from_private_memory():
 
 
 @pytest.mark.asyncio
+async def test_ask_summarizes_atlas_size_charts_without_truncated_rows():
+    store = InMemoryStore.seeded()
+    memory = StubMemoryGateway()
+    product = store.list_products()[0].model_copy(
+        update={
+            "sku": "433665",
+            "url": "https://www.uniqlo.com/us/en/products/433665",
+        }
+    )
+    store.save_product(product)
+    atlas = StubAtlasGateway(
+        [
+            MemoryContextFact(
+                text=(
+                    "Size chart (Uniqlo Oxford shirt). S: chest 104 cm, length 72 cm, "
+                    "shoulder 43 cm. M: chest 108 cm, length 74 cm, shoulder 45 cm. "
+                    "L: chest 112 cm, length 76 cm, shoulder 47 cm. Private outcomes "
+                    "should override public chart evidence."
+                ),
+                source="mizaaj_atlas:uniqlo_oxford_size_chart",
+                score=4,
+            )
+        ]
+    )
+
+    response = await AskFitService(store, memory, atlas).ask(
+        AskFitRequest(
+            user_id=LOCAL_USER_ID,
+            product_id=product.id,
+            question="What size should I start with and what should I measure?",
+        )
+    )
+
+    assert "Atlas found" in response.answer
+    assert "size chart" in response.answer
+    assert "for S-L" in response.answer
+    assert "chest, length, shoulder measurements" in response.answer
+    assert "Private outcomes should override" not in response.answer
+    atlas_evidence = [item for item in response.evidence if item.label == "Mizaaj Atlas"]
+    assert atlas_evidence
+    assert "M: chest 108 cm" in atlas_evidence[0].detail
+    assert atlas.queries
+    assert "433665" in atlas.queries[0].query
+    assert "https://www.uniqlo.com/us/en/products/433665" in atlas.queries[0].query
+    assert "size chart measurements" in atlas.queries[0].query
+
+
+@pytest.mark.asyncio
 async def test_ask_uses_unconfirmed_capture_as_temporary_item_context():
     store = InMemoryStore.seeded()
     memory = StubMemoryGateway()

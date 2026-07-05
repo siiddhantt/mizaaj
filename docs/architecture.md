@@ -26,6 +26,11 @@ new providers and scopes.
    - Confirmed profile facts, product evidence, purchases, returns, and fit outcomes.
    - Stored in Cognee per user dataset.
 
+5. Mizaaj Atlas
+   - Curated public product evidence, size guides, and category caveats.
+   - Stored in a separate Cognee Cloud dataset.
+   - Used only as source-labeled public evidence and never merged into private user memory.
+
 ## Backend Modules
 
 - `api/`: FastAPI route modules.
@@ -33,6 +38,7 @@ new providers and scopes.
 - `domain/captures`: evidence capture and confirmation workflow.
 - `domain/extraction`: AI extraction gateway.
 - `domain/memory`: Cognee local and Cognee Cloud memory gateway.
+- `domain/atlas`: seed fallback and Cognee Cloud public Atlas gateway.
 - `domain/products`: product snapshot model.
 - `domain/profiles`: private fit profile.
 - `domain/purchases`: purchase outcome and feedback.
@@ -45,6 +51,7 @@ new providers and scopes.
 Business services depend on protocols, not concrete providers:
 
 - `MemoryGateway`: local Cognee and Cognee Cloud.
+- `AtlasGateway`: local seed fallback and Cognee Cloud public Atlas recall.
 - `ExtractionGateway`: OpenRouter text and vision extraction.
 - `UploadGateway`: S3-compatible presigned uploads.
 
@@ -64,7 +71,14 @@ New deployments should use:
 mizaaj_user_<user_uuid_without_dashes>
 ```
 
-Aggregate or brand memory should be added later as a new scope, not mixed into private datasets.
+Public product memory uses the separate Atlas dataset:
+
+```text
+mizaaj_atlas_seed_v2
+```
+
+Private memory wins over Atlas when they conflict. Atlas can help first-time decisions, but it must
+stay source-labeled and non-personal.
 
 ## Database Path
 

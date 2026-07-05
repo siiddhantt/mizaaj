@@ -238,7 +238,7 @@ class AskFitService:
     async def _recall_atlas(
         self, request: AskFitRequest, product: ProductSnapshot | None
     ) -> AtlasContext:
-        query = self._recall_query(request, product)
+        query = self._atlas_recall_query(request, product)
         if self.atlas_gateway is None:
             return AtlasContext.disabled(query)
         try:
@@ -255,10 +255,19 @@ class AskFitService:
                 product.brand or "",
                 product.retailer or "",
                 product.title,
+                product.sku or "",
+                product.url or "",
                 product.category.value,
+                product.color or "",
                 product.material or "",
                 " ".join(product.size_options),
+                " ".join(label.label for label in product.size_labels),
                 " ".join(product.fit_descriptors),
+                " ".join(
+                    f"{identifier.kind} {identifier.value}"
+                    for identifier in product.product_identifiers
+                ),
+                " ".join(f"{attribute.name} {attribute.value}" for attribute in product.attributes),
             ]
         return " ".join(
             part.strip()
@@ -266,10 +275,64 @@ class AskFitService:
                 request.question,
                 request.context_notes or "",
                 *product_terms,
-                "fit size comfort silhouette returned kept tight loose shoulders chest fabric",
+                (
+                    "fit size comfort silhouette returned kept tight loose shoulders chest "
+                    "fabric size chart measurements sku style number product identity"
+                ),
             ]
             if part and part.strip()
         )
+
+    def _atlas_recall_query(self, request: AskFitRequest, product: ProductSnapshot | None) -> str:
+        if product is None:
+            return " ".join(
+                part.strip()
+                for part in [
+                    request.question,
+                    request.context_notes or "",
+                    "public product evidence size chart fit guidance measurements",
+                ]
+                if part and part.strip()
+            )
+
+        identity_terms = [
+            product.brand or "",
+            product.retailer or "",
+            product.title,
+            product.sku or "",
+            product.url or "",
+            product.category.value,
+            product.color or "",
+            product.material or "",
+            " ".join(product.size_options),
+            " ".join(label.label for label in product.size_labels),
+            " ".join(product.fit_descriptors),
+            " ".join(
+                f"{identifier.kind} {identifier.value}"
+                for identifier in product.product_identifiers
+            ),
+            " ".join(f"{attribute.name} {attribute.value}" for attribute in product.attributes),
+        ]
+        return " ".join(
+            part.strip()
+            for part in [
+                *identity_terms,
+                self._atlas_topic_terms(request.question, request.context_notes),
+                "public atlas product evidence size chart measurements fit guidance",
+            ]
+            if part and part.strip()
+        )
+
+    def _atlas_topic_terms(self, question: str, context_notes: str | None) -> str:
+        text = f"{question} {context_notes or ''}".lower()
+        terms: list[str] = []
+        if any(item in text for item in ["size", "measure", "chart", "chest", "shoulder"]):
+            terms.append("size chart chest shoulder length measurements")
+        if any(item in text for item in ["fabric", "material", "cotton", "polyester", "stretch"]):
+            terms.append("fabric material composition")
+        if any(item in text for item in ["fit", "drape", "oversized", "relaxed", "slim"]):
+            terms.append("fit descriptor silhouette guidance")
+        return " ".join(terms)
 
     def _related_purchases(
         self, purchases: list[PurchaseRecord], product: ProductSnapshot | None
@@ -377,7 +440,7 @@ class AskFitService:
         atlas: AtlasContext,
     ) -> str:
         profile_signal = self._profile_signal(profile)
-        atlas_signal = self._atlas_signal(atlas)
+        atlas_signal = self._atlas_signal(atlas, product)
         if product is None:
             if purchases or recalled.facts or profile_signal:
                 signal = (
@@ -646,15 +709,70 @@ class AskFitService:
     def _profile_signal(self, profile: FitProfile) -> str:
         signals: list[str] = []
         if profile.sensitivities:
-            signals.append(f"watch {', '.join(profile.sensitivities[:4])}")
+            signals.append(
+                ", ".join(item.strip() for item in profile.sensitivities[:4] if item.strip())
+            )
         if profile.body_notes and profile.body_notes.strip():
             signals.append(profile.body_notes.strip())
         return "; ".join(signals).strip()[:240].rstrip()
 
-    def _atlas_signal(self, atlas: AtlasContext) -> str:
+    def _atlas_signal(self, atlas: AtlasContext, product: ProductSnapshot | None = None) -> str:
         if not atlas.facts:
             return ""
-        return self._clean_memory_text(atlas.facts[0].text)[:260].rstrip()
+        text = self._clean_memory_text(atlas.facts[0].text)
+        lower = text.lower()
+        if "size chart" in lower or ("chest" in lower and "shoulder" in lower):
+            measurements = [
+                item
+                for item in ["chest", "length", "shoulder", "sleeve", "waist", "inseam"]
+                if item in lower
+            ]
+            label_summary = self._atlas_size_label_summary(text)
+            scope = "product-specific" if "product-specific" in lower else "source-backed"
+            if product and product.brand and product.brand.lower() in lower:
+                scope = f"source-backed {product.brand} "
+                if "product-specific" in lower:
+                    scope = f"product-specific {product.brand} "
+                scope = scope.strip()
+            measurement_text = (
+                f" with {', '.join(measurements[:4])} measurements" if measurements else ""
+            )
+            return (
+                f"Atlas found a {scope} size chart{label_summary}{measurement_text}. "
+                "Use it as public evidence, then override it with your private try-on outcomes."
+            )
+        return self._trim_to_sentence(text, 260)
+
+    def _atlas_size_label_summary(self, text: str) -> str:
+        labels = []
+        alpha_pattern = r"(?<![A-Z0-9])(?:XXXL|XXL|XXS|XL|XS|3XL|2XL|S|M|L)(?=[:\s,;.-])"
+        numeric_pattern = r"\b(?:size|eu|waist)\s*(\d{2,3})\b"
+        matches = re.findall(alpha_pattern, text, flags=re.IGNORECASE)
+        if not matches:
+            matches = re.findall(numeric_pattern, text, flags=re.IGNORECASE)
+        for match in matches:
+            match = match.upper()
+            if match not in labels:
+                labels.append(match)
+        if not labels:
+            return ""
+        alpha_order = ["XXS", "XS", "S", "M", "L", "XL", "XXL", "2XL", "XXXL", "3XL"]
+        if all(label in alpha_order for label in labels):
+            labels.sort(key=alpha_order.index)
+        elif all(label.isdigit() for label in labels):
+            labels.sort(key=int)
+        if len(labels) >= 3:
+            return f" for {labels[0]}-{labels[-1]}"
+        return f" for {', '.join(labels)}"
+
+    def _trim_to_sentence(self, text: str, limit: int) -> str:
+        clean = re.sub(r"\s+", " ", text).strip()
+        if len(clean) <= limit:
+            return clean
+        cutoff = max(clean.rfind(". ", 0, limit), clean.rfind("; ", 0, limit))
+        if cutoff > 80:
+            return clean[: cutoff + 1].rstrip()
+        return clean[:limit].rsplit(" ", 1)[0].rstrip(" ,;:-") + "."
 
     def _product_detail(self, product: ProductSnapshot) -> str:
         parts = [

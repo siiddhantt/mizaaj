@@ -53,6 +53,26 @@ For OpenRouter extraction, fill `OPENROUTER_API_KEY` and keep separate text and 
 The extractor only writes reviewable drafts. Confirmed memories are still created later in the
 capture confirmation flow.
 
+## Mizaaj Atlas
+
+Atlas is the public, curated fit-intelligence layer. Keep it separate from private user memory:
+private memories use `COGNEE_DATASET_PREFIX`, while Atlas uses `ATLAS_DATASET_NAME`.
+
+Dry-run the cleaned seed:
+
+```powershell
+uv run python scripts/seed_atlas.py
+```
+
+Index it into Cognee Cloud when the demo tenant is ready:
+
+```powershell
+uv run python scripts/seed_atlas.py --spend-credits --forget-first
+```
+
+Use `ATLAS_PROVIDER=cognee_cloud` for the final cloud demo, or `ATLAS_PROVIDER=seed` for a local
+fallback that does not spend Cognee Cloud credits.
+
 ## Core Routes
 
 - `POST /api/v1/captures`: create an extracted product draft from text/assets.
