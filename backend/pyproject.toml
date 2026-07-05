@@ -1,7 +1,7 @@
 [project]
 name = "mizaaj-backend"
 version = "0.1.0"
-description = "Private fit memory API for the Cognee hackathon"
+description = "Private fit memory API powered by Cognee"
 readme = "README.md"
 requires-python = ">=3.12,<3.14"
 dependencies = [

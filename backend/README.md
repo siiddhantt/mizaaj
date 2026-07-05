@@ -5,12 +5,12 @@ FastAPI service for Mizaaj, a private-first clothing fit memory product powered 
 ## Local Setup
 
 ```bash
-cd fitrecall
+cd <repo-root>
 docker compose up -d postgres minio minio-bucket
 ```
 
 ```bash
-cd fitrecall/backend
+cd backend
 uv python install 3.12
 uv sync --dev
 cp .env.example .env
@@ -27,16 +27,16 @@ uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8081
 ```
 
 The default runtime uses Postgres persistence, S3-compatible upload intents, OpenRouter extraction,
-and local Cognee memory. Fill the missing keys in `.env` before running capture extraction or memory
-flows that need those providers.
+Cognee Cloud private memory, and Cognee Cloud Atlas recall. Fill the missing keys in `.env` before
+running capture extraction or memory flows that need those providers.
 
 ## Providers
 
 - `STORE_PROVIDER=postgres`: persists profiles, captures, product snapshots, and purchases in Postgres.
+- `MEMORY_PROVIDER=cognee_cloud`: routes private memory calls through Cognee Cloud.
 - `MEMORY_PROVIDER=cognee_local`: calls `cognee.remember` and `cognee.recall` against local Cognee.
-- `MEMORY_PROVIDER=cognee_cloud`: routes memory calls through Cognee Cloud.
-- `ATLAS_PROVIDER=seed`: recalls curated public Atlas records from `backend/data` for local demos.
 - `ATLAS_PROVIDER=cognee_cloud`: recalls the public Atlas dataset from Cognee Cloud.
+- `ATLAS_PROVIDER=seed`: recalls curated public Atlas records from `backend/data` as an offline fallback.
 - `UPLOAD_PROVIDER=s3`: returns presigned PUT URLs for AWS S3, MinIO, R2, or compatible storage.
 - `EXTRACTION_PROVIDER=openrouter`: extracts reviewable product drafts with OpenRouter.
 
@@ -64,13 +64,13 @@ Dry-run the cleaned seed:
 uv run python scripts/seed_atlas.py
 ```
 
-Index it into Cognee Cloud when the demo tenant is ready:
+Index it into Cognee Cloud when the tenant is ready:
 
 ```powershell
 uv run python scripts/seed_atlas.py --spend-credits --forget-first
 ```
 
-Use `ATLAS_PROVIDER=cognee_cloud` for the final cloud demo, or `ATLAS_PROVIDER=seed` for a local
+Use `ATLAS_PROVIDER=cognee_cloud` for the managed Cloud path, or `ATLAS_PROVIDER=seed` for a local
 fallback that does not spend Cognee Cloud credits.
 
 ## Core Routes
@@ -91,7 +91,7 @@ OpenAPI docs are available at `http://localhost:8080/docs`.
 Use the Windows runner to avoid inline environment-variable quoting issues:
 
 ```powershell
-cd D:\Development\Projects\cognee-hackathon\fitrecall\backend
+cd backend
 .\scripts\test-backend.ps1
 ```
 
@@ -107,7 +107,7 @@ For the explicit live provider smoke, first run the dry config check:
 .\scripts\live-smoke.ps1
 ```
 
-Then run the text-only OpenRouter plus local Cognee path when you intentionally want to spend a
+Then run the text-only OpenRouter plus configured memory path when you intentionally want to spend a
 small amount of provider credits:
 
 ```powershell

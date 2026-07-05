@@ -211,6 +211,8 @@ describe("Mizaaj app", () => {
       environment: "test",
       store_provider: "memory",
       memory_provider: "cognee_local",
+      atlas_provider: "seed",
+      atlas_dataset_name: "mizaaj_atlas_seed_v2",
       upload_provider: "s3",
       extraction_provider: "openrouter",
       cognee_dataset_prefix: "mizaaj_user",

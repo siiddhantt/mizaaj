@@ -1646,7 +1646,10 @@ function ProfileView({
   saveProfile: () => Promise<void>
 }) {
   const memoryProvider = systemStatus?.memory_provider.replace("_", " ") ?? "memory"
+  const atlasProvider = systemStatus?.atlas_provider.replace("_", " ") ?? "atlas"
+  const atlasDatasetName = systemStatus?.atlas_dataset_name ?? "mizaaj_atlas_seed_v2"
   const cloudEnabled = systemStatus?.memory_provider === "cognee_cloud"
+  const atlasCloudEnabled = systemStatus?.atlas_provider === "cognee_cloud"
 
   function addSensitivity(value: string) {
     setProfile((current) =>
@@ -1694,8 +1697,8 @@ function ProfileView({
               <p className="mt-2 text-lg font-semibold capitalize">{memoryProvider}</p>
             </div>
             <div className="rounded-[1.5rem] border border-border/55 bg-background/35 p-4">
-              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Saved signals</p>
-              <p className="mt-2 text-lg font-semibold">{profile.sensitivities.length}</p>
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Atlas source</p>
+              <p className="mt-2 text-lg font-semibold capitalize">{atlasProvider}</p>
             </div>
           </div>
         </div>
@@ -1843,11 +1846,23 @@ function ProfileView({
           </section>
 
           <section className="glass-panel rounded-[2rem] p-5">
+            <p className="text-sm font-semibold">Mizaaj Atlas</p>
+            <p className="mt-2 text-sm leading-6 text-muted-foreground">
+              {atlasCloudEnabled
+                ? "Public size-chart and product facts are recalled from the shared Atlas brain."
+                : "Atlas is using the local seed fallback for shared product facts."}
+            </p>
+            <Badge variant="outline" className="glass-chip mt-4 max-w-full rounded-full">
+              <span className="truncate">{atlasDatasetName}</span>
+            </Badge>
+          </section>
+
+          <section className="glass-panel rounded-[2rem] p-5">
             <p className="text-sm font-semibold">Usage</p>
             <p className="mt-2 text-sm leading-6 text-muted-foreground">
               {systemStatus?.cloud_usage
                 ? "Cloud indexing and recall use Cognee credits; billing stays in the Cognee dashboard."
-                : "Local Cognee does not spend Cloud credits. Extraction and local recall can still use OpenRouter."}
+                : "Local recall does not spend Cognee Cloud credits. Extraction can still use OpenRouter."}
             </p>
           </section>
         </aside>

@@ -21,6 +21,8 @@ class SystemStatusResponse(BaseModel):
     environment: str
     store_provider: str
     memory_provider: Literal["cognee_local", "cognee_cloud"]
+    atlas_provider: Literal["seed", "cognee_cloud", "disabled"]
+    atlas_dataset_name: str
     upload_provider: str
     extraction_provider: str
     cognee_dataset_prefix: str
@@ -38,6 +40,8 @@ async def system_status(
         environment=settings.environment,
         store_provider=settings.store_provider,
         memory_provider=settings.memory_provider,
+        atlas_provider=settings.atlas_provider,
+        atlas_dataset_name=settings.atlas_dataset_name,
         upload_provider=settings.upload_provider,
         extraction_provider=settings.extraction_provider,
         cognee_dataset_prefix=settings.cognee_dataset_prefix,

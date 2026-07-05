@@ -1,6 +1,5 @@
 # Mizaaj
 
-![Hackathon](https://img.shields.io/badge/Cognee-Hackathon-8b5cf6)
 ![Backend](https://img.shields.io/badge/FastAPI-0f172a?logo=fastapi)
 ![Frontend](https://img.shields.io/badge/React%20%2B%20Vite-111827?logo=react)
 ![Memory](https://img.shields.io/badge/Memory-Cognee-38bdf8)
@@ -41,7 +40,7 @@ future fit questions.
 ```text
 frontend/    React, Vite, TypeScript, shadcn-style UI
 backend/     FastAPI domain services and API routes
-docs/        Architecture notes, model choice, demo script, submission checklist
+docs/        Architecture, model choice, and Atlas identity notes
 ```
 
 The backend keeps the important memory boundaries separate:
@@ -104,17 +103,10 @@ UPLOAD_PROVIDER=s3
 S3_ENDPOINT_URL=http://localhost:9000
 S3_PUBLIC_BASE_URL=http://localhost:9000/mizaaj-uploads
 OPENROUTER_API_KEY=
-MEMORY_PROVIDER=cognee_local
-ATLAS_PROVIDER=seed
-ATLAS_DATASET_NAME=mizaaj_atlas_seed_v2
-COGNEE_DATASET_PREFIX=mizaaj_user
-```
-
-For the hackathon demo, use Cognee Cloud as the primary memory path:
-
-```env
 MEMORY_PROVIDER=cognee_cloud
 ATLAS_PROVIDER=cognee_cloud
+ATLAS_DATASET_NAME=mizaaj_atlas_seed_v2
+COGNEE_DATASET_PREFIX=mizaaj_user
 COGNEE_CLOUD_BASE_URL=
 COGNEE_CLOUD_API_KEY=
 ```

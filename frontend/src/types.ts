@@ -162,6 +162,8 @@ export interface SystemStatus {
   environment: string
   store_provider: string
   memory_provider: "cognee_local" | "cognee_cloud"
+  atlas_provider: "seed" | "cognee_cloud" | "disabled"
+  atlas_dataset_name: string
   upload_provider: string
   extraction_provider: string
   cognee_dataset_prefix: string
