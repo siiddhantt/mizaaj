@@ -12,6 +12,8 @@ personal memory of what actually fits you. Instead of guessing from generic revi
 Mizaaj whether a new item matches your own history, silhouette preferences, fabric sensitivities,
 and confirmed outcomes.
 
+<img width="1440" height="782" alt="Screenshot 2026-07-06 at 2 48 41 PM" src="https://github.com/user-attachments/assets/fee25932-2d7f-4368-ad44-07cfb3d84ae1" />
+
 ## Why It Exists
 
 Online size charts forget the most important context: your body, your taste, and your past mistakes.
