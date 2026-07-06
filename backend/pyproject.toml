@@ -7,8 +7,6 @@ requires-python = ">=3.12,<3.14"
 dependencies = [
     "alembic>=1.14.0",
     "boto3>=1.42.0",
-    "cognee>=0.2.0",
-    "fastembed<=0.8.0",
     "fastapi>=0.115.0,<0.117.0",
     "httpx>=0.28.0",
     "psycopg[binary]>=3.3.0",
@@ -19,6 +17,15 @@ dependencies = [
     "uvicorn[standard]>=0.34.0",
     "pyjwt[crypto]>=2.10.0",
 ]
+
+[project.optional-dependencies]
+local-memory = [
+    "cognee>=0.2.0",
+    "fastembed<=0.8.0",
+]
+
+[tool.setuptools.packages.find]
+include = ["app*"]
 
 [dependency-groups]
 dev = [

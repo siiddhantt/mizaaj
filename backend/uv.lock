@@ -1448,9 +1448,7 @@ source = { virtual = "." }
 dependencies = [
     { name = "alembic" },
     { name = "boto3" },
-    { name = "cognee" },
     { name = "fastapi" },
-    { name = "fastembed" },
     { name = "httpx" },
     { name = "psycopg", extra = ["binary"] },
     { name = "pydantic" },
@@ -1459,6 +1457,12 @@ dependencies = [
     { name = "python-multipart" },
     { name = "sqlalchemy", extra = ["asyncio"] },
     { name = "uvicorn", extra = ["standard"] },
+]
+
+[package.optional-dependencies]
+local-memory = [
+    { name = "cognee" },
+    { name = "fastembed" },
 ]
 
 [package.dev-dependencies]
@@ -1472,9 +1476,9 @@ dev = [
 requires-dist = [
     { name = "alembic", specifier = ">=1.14.0" },
     { name = "boto3", specifier = ">=1.42.0" },
-    { name = "cognee", specifier = ">=0.2.0" },
+    { name = "cognee", marker = "extra == 'local-memory'", specifier = ">=0.2.0" },
     { name = "fastapi", specifier = ">=0.115.0,<0.117.0" },
-    { name = "fastembed", specifier = "<=0.8.0" },
+    { name = "fastembed", marker = "extra == 'local-memory'", specifier = "<=0.8.0" },
     { name = "httpx", specifier = ">=0.28.0" },
     { name = "psycopg", extras = ["binary"], specifier = ">=3.3.0" },
     { name = "pydantic", specifier = ">=2.10.0" },
@@ -1484,6 +1488,7 @@ requires-dist = [
     { name = "sqlalchemy", extras = ["asyncio"], specifier = ">=2.0.36" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.34.0" },
 ]
+provides-extras = ["local-memory"]
 
 [package.metadata.requires-dev]
 dev = [

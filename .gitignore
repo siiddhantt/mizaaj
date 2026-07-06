@@ -32,6 +32,7 @@ frontend/*.tsbuildinfo
 logs/
 tmp/
 temp/
+.deploy/
 
 # OS/editor
 .DS_Store
