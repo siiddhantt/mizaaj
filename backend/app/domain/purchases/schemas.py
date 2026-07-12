@@ -12,9 +12,9 @@ class PurchaseCreate(BaseModel):
     purchased_size: str
     outcome: FitOutcome = FitOutcome.unknown
     purchased_at: date | None = None
-    fit_rating: int = Field(default=3, ge=1, le=5)
-    comfort_rating: int = Field(default=3, ge=1, le=5)
-    silhouette_rating: int = Field(default=3, ge=1, le=5)
+    fit_rating: int | None = Field(default=None, ge=1, le=5)
+    comfort_rating: int | None = Field(default=None, ge=1, le=5)
+    silhouette_rating: int | None = Field(default=None, ge=1, le=5)
     fit_notes: str | None = None
 
 

@@ -16,6 +16,14 @@ class ProductService:
     def backfill_saved_memory_products(self, user_id: UUID) -> None:
         for record in self.store.list_saved_memories(user_id):
             if record.product_id is not None:
+                if record.capture_id is not None:
+                    capture = self.store.get_capture(record.capture_id)
+                    if capture.user_id != user_id:
+                        raise ForbiddenError("Saved memory capture belongs to a different user")
+                    if capture.linked_product_id != record.product_id:
+                        self.store.save_capture(
+                            capture.model_copy(update={"linked_product_id": record.product_id})
+                        )
                 continue
             if record.capture_id is None:
                 continue

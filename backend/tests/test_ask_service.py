@@ -3,15 +3,24 @@ from uuid import UUID
 import pytest
 
 from app.core.errors import ForbiddenError
-from app.domain.ask.schemas import AskFitRequest, RememberMemoryDraftsRequest
+from app.domain.ask.schemas import (
+    AskFitRequest,
+    ConversationRole,
+    ConversationTurn,
+    MemoryDraft,
+    MemoryDraftKind,
+    OutcomeDraft,
+    RememberMemoryDraftsRequest,
+)
 from app.domain.ask.service import AskFitService
 from app.domain.captures.schemas import CaptureResponse
 from app.domain.common import ClothingCategory
 from app.domain.memory.schemas import FitMemoryEntry, MemoryContextFact, RecallFitContextRequest
 from app.domain.products.schemas import ProductDraft, ProductSnapshot, SizeLabel
 from app.domain.profiles.schemas import FitProfileUpdate
+from app.domain.reasoning.schemas import GroundedReasoningResult
 from app.storage.in_memory import LOCAL_USER_ID, InMemoryStore
-from tests.stubs import StubAtlasGateway, StubMemoryGateway
+from tests.stubs import StubAtlasGateway, StubMemoryGateway, StubReasoningGateway
 
 OTHER_USER_ID = UUID("00000000-0000-4000-8000-000000000002")
 
@@ -220,6 +229,93 @@ async def test_ask_uses_unconfirmed_capture_as_temporary_item_context():
     assert "The Bear House - Drop shoulder t-shirt" in response.answer
     assert any(item.label == "Current item" for item in response.evidence)
     assert any("drop shoulder" in item.detail for item in response.evidence)
+
+    repeated = await AskFitService(store, memory).ask(
+        AskFitRequest(
+            user_id=LOCAL_USER_ID,
+            capture_id=capture.id,
+            question="What about the same shirt's sleeves?",
+        )
+    )
+    first_source = next(item.source for item in response.evidence if item.label == "Current item")
+    repeated_source = next(
+        item.source for item in repeated.evidence if item.label == "Current item"
+    )
+    assert repeated_source == first_source
+
+
+@pytest.mark.asyncio
+async def test_ask_uses_grounded_reasoning_with_conversation_and_evidence():
+    store = InMemoryStore.seeded()
+    memory = StubMemoryGateway()
+    product = store.list_products()[0]
+    reasoner = StubReasoningGateway(
+        GroundedReasoningResult(
+            answer="Your saved M outcome is the strongest signal.",
+            confidence=0.83,
+            used_evidence_sources=[f"product:{product.id}"],
+            memory_drafts=[
+                MemoryDraft(
+                    kind=MemoryDraftKind.fit_preference,
+                    subject=f"user:{LOCAL_USER_ID}:fit_preference",
+                    text="User explicitly prefers relaxed shoulders.",
+                )
+            ],
+            outcome_draft=OutcomeDraft(
+                purchased_size="M",
+                outcome="kept",
+                fit_notes="Relaxed shoulders worked well.",
+            ),
+        )
+    )
+    conversation = [
+        ConversationTurn(role=ConversationRole.user, content="I tried the shirt yesterday."),
+        ConversationTurn(role=ConversationRole.assistant, content="How did the shoulders feel?"),
+    ]
+
+    response = await AskFitService(store, memory, reasoning_gateway=reasoner).ask(
+        AskFitRequest(
+            user_id=LOCAL_USER_ID,
+            product_id=product.id,
+            question="They felt relaxed, and I kept M.",
+            conversation=conversation,
+        )
+    )
+
+    assert response.reasoning_status == "grounded"
+    assert response.answer == "Your saved M outcome is the strongest signal."
+    assert response.outcome_draft is not None
+    assert response.outcome_draft.purchased_size == "M"
+    assert reasoner.requests[0].conversation == conversation
+    assert any(item.label == "Current item" for item in reasoner.requests[0].evidence)
+
+
+@pytest.mark.asyncio
+async def test_ask_does_not_propose_outcome_from_recalled_history_alone():
+    store = InMemoryStore.seeded()
+    memory = StubMemoryGateway()
+    product = store.list_products()[0]
+    reasoner = StubReasoningGateway(
+        GroundedReasoningResult(
+            answer="Your earlier outcome is useful evidence.",
+            confidence=0.8,
+            outcome_draft=OutcomeDraft(
+                purchased_size="M",
+                outcome="kept",
+                fit_notes="Recalled from an earlier memory.",
+            ),
+        )
+    )
+
+    response = await AskFitService(store, memory, reasoning_gateway=reasoner).ask(
+        AskFitRequest(
+            user_id=LOCAL_USER_ID,
+            product_id=product.id,
+            question="Should I keep this one?",
+        )
+    )
+
+    assert response.outcome_draft is None
 
 
 @pytest.mark.asyncio

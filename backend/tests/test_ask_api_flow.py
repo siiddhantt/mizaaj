@@ -249,6 +249,19 @@ def test_product_list_does_not_promote_capture_linked_to_existing_product():
     linked_capture = store.get_capture(UUID(capture["id"]))
     assert linked_capture.confirmed is False
     assert linked_capture.product_snapshot is None
+    assert linked_capture.linked_product_id == existing_product.id
+    indexed = memory._entries[LOCAL_USER_ID]
+    assert indexed
+    assert all(
+        not entry.subject.startswith("product:")
+        or entry.subject.startswith(f"product:{existing_product.id}")
+        for entry in indexed
+    )
+    assert all(
+        not tag.startswith("product:") or tag == f"product:{existing_product.id}"
+        for entry in indexed
+        for tag in entry.tags
+    )
 
 
 def test_ask_outcome_note_creates_memory_drafts_instead_of_size_advice():

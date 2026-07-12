@@ -13,6 +13,7 @@ from app.domain.memory.schemas import (
     RecallFitContextRequest,
 )
 from app.domain.products.schemas import ProductDraft
+from app.domain.reasoning.schemas import GroundedReasoningRequest, GroundedReasoningResult
 
 
 class StubExtractionGateway:
@@ -110,3 +111,13 @@ class FailingMemoryGateway:
 class FailingRecallMemoryGateway(StubMemoryGateway):
     async def recall_private(self, query: RecallFitContextRequest) -> MemoryContext:
         raise TimeoutError("memory recall timed out")
+
+
+class StubReasoningGateway:
+    def __init__(self, result: GroundedReasoningResult):
+        self.result = result
+        self.requests: list[GroundedReasoningRequest] = []
+
+    async def synthesize(self, request: GroundedReasoningRequest) -> GroundedReasoningResult:
+        self.requests.append(request)
+        return self.result

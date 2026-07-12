@@ -19,8 +19,9 @@ new providers and scopes.
 
 3. Product snapshots
    - Best-effort item records created from confirmed capture data.
-   - SKU and canonical identity are optional.
-   - Later entity resolution can link snapshots into canonical products.
+   - SKU and canonical URLs strengthen identity when available.
+   - A capture keeps a stable provisional identity until it is confirmed or explicitly linked to
+     an existing product. Saved conversations are rewritten to that canonical product identity.
 
 4. Private fit memory
    - Confirmed profile facts, product evidence, purchases, returns, and fit outcomes.
@@ -31,6 +32,13 @@ new providers and scopes.
    - Stored in a separate Cognee Cloud dataset.
    - Used only as source-labeled public evidence and never merged into private user memory.
 
+6. Grounded answers
+   - Private recall and Atlas recall run concurrently and return context rather than composing the
+     final answer themselves.
+   - A strict-schema reasoning gateway applies the evidence order: exact outcomes, comparable
+     outcomes, current profile and private memory, current item facts, then Atlas.
+   - Advice is never stored automatically. Memory cards and try-on outcomes require user approval.
+
 ## Backend Modules
 
 - `api/`: FastAPI route modules.
@@ -39,6 +47,7 @@ new providers and scopes.
 - `domain/extraction`: AI extraction gateway.
 - `domain/memory`: Cognee local and Cognee Cloud memory gateway.
 - `domain/atlas`: seed fallback and Cognee Cloud public Atlas gateway.
+- `domain/reasoning`: grounded answer synthesis and structured memory/outcome proposals.
 - `domain/products`: product snapshot model.
 - `domain/profiles`: private fit profile.
 - `domain/purchases`: purchase outcome and feedback.
@@ -59,16 +68,10 @@ Tests use explicit provider overrides. Runtime configuration points at real infr
 
 ## Private Memory Scope
 
-Every user's Cognee dataset is named:
+Every user's Cognee dataset is derived from a configurable prefix:
 
 ```text
-mizaaj_user_<user_uuid_without_dashes>
-```
-
-New deployments should use:
-
-```text
-mizaaj_user_<user_uuid_without_dashes>
+mizaaj_private_<user_uuid_without_dashes>
 ```
 
 Public product memory uses the separate Atlas dataset:
@@ -79,6 +82,10 @@ mizaaj_atlas_seed_v2
 
 Private memory wins over Atlas when they conflict. Atlas can help first-time decisions, but it must
 stay source-labeled and non-personal.
+
+Postgres remains the source of truth. Cognee is a derived, user-scoped semantic and graph index.
+Destructive rebuilds delete each indexed item and use Cognee's unified per-item forget operation as
+a Cloud compatibility fallback before writing canonical records again.
 
 ## Database Path
 

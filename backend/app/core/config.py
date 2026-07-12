@@ -24,7 +24,7 @@ class Settings(BaseSettings):
     memory_provider: Literal["cognee_local", "cognee_cloud"] = "cognee_local"
     atlas_provider: Literal["seed", "cognee_cloud", "disabled"] = "seed"
     atlas_dataset_name: str = "mizaaj_atlas_seed_v2"
-    cognee_dataset_prefix: str = "mizaaj_user"
+    cognee_dataset_prefix: str = "mizaaj_private"
     cognee_cloud_base_url: HttpUrl | None = None
     cognee_cloud_api_key: str | None = None
     cognee_llm_provider: str = "custom"

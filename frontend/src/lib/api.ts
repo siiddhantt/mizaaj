@@ -2,6 +2,7 @@ import type {
   CaptureResponse,
   AskFitResponse,
   AskEvidence,
+  ConversationTurn,
   CurrentUser,
   FitProfile,
   MemoryContextFact,
@@ -214,6 +215,8 @@ export const api = {
     product_id?: string
     capture_id?: string
     context_notes?: string
+    conversation?: ConversationTurn[]
+    session_id?: string
   }) {
     return request<AskFitResponse>("/ask", {
       method: "POST",

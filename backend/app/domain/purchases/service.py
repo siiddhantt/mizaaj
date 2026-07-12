@@ -4,6 +4,7 @@ from app.core.errors import ForbiddenError
 from app.domain.memory.gateway import MemoryGateway
 from app.domain.memory.rebuilder import PrivateMemoryRebuilder
 from app.domain.memory.schemas import FitMemoryEntry
+from app.domain.products.schemas import ProductSnapshot
 from app.domain.purchases.schemas import PurchaseCreate, PurchaseRecord, PurchaseUpdate
 from app.storage.store import MizaajStore
 
@@ -23,6 +24,7 @@ class PurchaseService:
 
     async def create_purchase(self, payload: PurchaseCreate) -> PurchaseRecord:
         product = self.store.get_product(payload.product_id)
+        self._assert_product_owner(payload.user_id, product)
         purchase = self.store.save_purchase(PurchaseRecord(**payload.model_dump()))
         if self.memory_gateway is not None:
             await self.memory_gateway.remember_private(
@@ -54,3 +56,10 @@ class PurchaseService:
     def _assert_owner(self, user_id: UUID, purchase: PurchaseRecord) -> None:
         if purchase.user_id != user_id:
             raise ForbiddenError("Purchase record does not belong to the current user")
+
+    def _assert_product_owner(self, user_id: UUID, product: ProductSnapshot) -> None:
+        if product.source_capture_id is None:
+            return
+        capture = self.store.get_capture(product.source_capture_id)
+        if capture.user_id != user_id:
+            raise ForbiddenError("Product does not belong to the current user")

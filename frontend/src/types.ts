@@ -128,6 +128,7 @@ export interface CaptureResponse {
   user_notes?: string | null
   product_draft: ProductDraft
   product_snapshot?: ProductSnapshot | null
+  linked_product_id?: string | null
   confirmed: boolean
   memory_status: "not_indexed" | "indexing" | "indexed" | "failed" | string
   memory_error?: string | null
@@ -140,9 +141,9 @@ export interface PurchaseRecord {
   purchased_size: string
   outcome: FitOutcome
   purchased_at?: string | null
-  fit_rating: number
-  comfort_rating: number
-  silhouette_rating: number
+  fit_rating?: number | null
+  comfort_rating?: number | null
+  silhouette_rating?: number | null
   fit_notes?: string | null
 }
 
@@ -217,6 +218,21 @@ export interface MemoryDraft {
   tags: string[]
 }
 
+export interface ConversationTurn {
+  role: "user" | "assistant"
+  content: string
+}
+
+export interface OutcomeDraft {
+  purchased_size?: string | null
+  outcome: FitOutcome
+  fit_rating?: number | null
+  comfort_rating?: number | null
+  silhouette_rating?: number | null
+  fit_notes: string
+  confidence: number
+}
+
 export interface AskFitResponse {
   user_id: string
   question: string
@@ -225,6 +241,8 @@ export interface AskFitResponse {
   evidence: AskEvidence[]
   recalled_facts: MemoryContextFact[]
   memory_drafts: MemoryDraft[]
+  outcome_draft?: OutcomeDraft | null
+  reasoning_status: "grounded" | "fallback"
 }
 
 export interface RememberMemoryDraftsResponse {

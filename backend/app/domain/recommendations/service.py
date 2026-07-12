@@ -148,8 +148,20 @@ class RecommendationService:
             RecommendationEvidence(
                 label="Past purchase",
                 detail=(
-                    f"Size {item.purchased_size}: {item.outcome.value}, "
-                    f"fit {item.fit_rating}/5, comfort {item.comfort_rating}/5."
+                    f"Size {item.purchased_size}: {item.outcome.value}."
+                    + (
+                        " "
+                        + ", ".join(
+                            f"{label} {value}/5"
+                            for label, value in [
+                                ("fit", item.fit_rating),
+                                ("comfort", item.comfort_rating),
+                            ]
+                            if value is not None
+                        )
+                        if item.fit_rating is not None or item.comfort_rating is not None
+                        else ""
+                    )
                 ),
                 source=str(item.id),
             )

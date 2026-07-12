@@ -5,6 +5,7 @@ import pytest
 
 from app.core.config import Settings
 from app.domain.memory.cognee_cloud import CogneeCloudMemoryGateway
+from app.domain.memory.recall import clean_recall_text
 from app.domain.memory.schemas import FitMemoryEntry, ForgetScope, RecallFitContextRequest
 
 USER_ID = UUID("00000000-0000-4000-8000-000000000001")
@@ -48,7 +49,8 @@ async def test_cloud_remember_uses_cognee_http_memory_api():
     assert body.count('name="node_set"') == 2
     assert "source:purchase" in body
     assert "brand:uniqlo" in body
-    assert 'name="data"; filename="purchase:test.txt"' in body
+    assert 'name="data"; filename="purchase_test-' in body
+    assert '.txt"' in body
     assert "Uniqlo M shirt worked well at the shoulders." in body
 
 
@@ -120,15 +122,75 @@ async def test_cloud_forget_deletes_private_dataset():
 
     async def handler(request: httpx.Request) -> httpx.Response:
         requests.append(request)
+        if request.method == "GET" and len(requests) == 1:
+            return httpx.Response(
+                200,
+                json=[
+                    {
+                        "id": "11111111-1111-4111-8111-111111111111",
+                        "name": "mizaaj_user_00000000000040008000000000000001",
+                    }
+                ],
+            )
+        if request.method == "GET":
+            return httpx.Response(
+                200,
+                json=[{"id": "22222222-2222-4222-8222-222222222222"}],
+            )
+        if request.method == "DELETE":
+            return httpx.Response(204)
+        return httpx.Response(500)
+
+    gateway = CogneeCloudMemoryGateway(cloud_settings(), httpx.MockTransport(handler))
+
+    await gateway.forget_private(USER_ID, ForgetScope.all_private)
+
+    assert [request.method for request in requests] == ["GET", "GET", "DELETE"]
+    assert requests[2].url.path == (
+        "/api/v1/datasets/11111111-1111-4111-8111-111111111111/"
+        "data/22222222-2222-4222-8222-222222222222"
+    )
+
+
+@pytest.mark.asyncio
+async def test_cloud_forget_falls_back_when_item_deletion_is_unavailable():
+    requests: list[httpx.Request] = []
+
+    async def handler(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        if request.url.path == "/api/v1/datasets/":
+            return httpx.Response(
+                200,
+                json=[
+                    {
+                        "id": "11111111-1111-4111-8111-111111111111",
+                        "name": "mizaaj_user_00000000000040008000000000000001",
+                    }
+                ],
+            )
+        if request.method == "GET":
+            return httpx.Response(
+                200,
+                json=[{"id": "22222222-2222-4222-8222-222222222222"}],
+            )
+        if request.method == "DELETE":
+            return httpx.Response(500)
         return httpx.Response(200, json={"status": "ok"})
 
     gateway = CogneeCloudMemoryGateway(cloud_settings(), httpx.MockTransport(handler))
 
     await gateway.forget_private(USER_ID, ForgetScope.all_private)
 
-    request = requests[0]
-    assert request.method == "POST"
-    assert request.url.path == "/api/v1/forget"
-    assert b'"dataset":"mizaaj_user_00000000000040008000000000000001"' in request.content
-    assert b'"everything":false' in request.content
-    assert b'"memoryOnly":true' in request.content
+    assert requests[-1].method == "POST"
+    assert requests[-1].url.path == "/api/v1/forget"
+    assert b'"dataset":"mizaaj_user_00000000000040008000000000000001"' in requests[-1].content
+    assert b'"data_id":"22222222-2222-4222-8222-222222222222"' in requests[-1].content
+
+
+def test_clean_recall_text_extracts_cognee_node_content():
+    raw = (
+        "Nodes: Node: memory __node_content_start__ Size L was kept and did not cling. "
+        "__node_content_end__ Node: metadata"
+    )
+
+    assert clean_recall_text(raw) == "Size L was kept and did not cling."

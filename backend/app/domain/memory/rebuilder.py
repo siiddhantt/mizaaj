@@ -1,6 +1,7 @@
 from uuid import UUID
 
 from app.domain.memory.gateway import MemoryGateway
+from app.domain.memory.identity import canonicalize_memory_draft, memory_draft_text
 from app.domain.memory.schemas import FitMemoryEntry, ForgetScope
 from app.storage.store import MizaajStore
 
@@ -36,12 +37,13 @@ class PrivateMemoryRebuilder:
             )
 
         for record in reversed(self.store.list_saved_memories(user_id)):
-            for draft in record.remembered:
+            for raw_draft in record.remembered:
+                draft = canonicalize_memory_draft(raw_draft, record.product_id)
                 await self.memory_gateway.remember_private(
                     user_id,
                     FitMemoryEntry(
                         subject=draft.subject,
-                        text=draft.text,
+                        text=memory_draft_text(draft),
                         tags=[
                             "source:ask",
                             f"kind:{draft.kind.value}",

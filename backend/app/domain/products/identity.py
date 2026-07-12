@@ -1,4 +1,12 @@
+from uuid import UUID, uuid5
+
 from app.domain.products.schemas import ProductDraft, ProductSnapshot
+
+PROVISIONAL_PRODUCT_NAMESPACE = UUID("2ae58e5b-0d6e-4e58-8914-9df58397cc72")
+
+
+def provisional_product_id(capture_id: UUID) -> UUID:
+    return uuid5(PROVISIONAL_PRODUCT_NAMESPACE, str(capture_id))
 
 
 def fallback_title(draft: ProductDraft) -> str:
@@ -15,10 +23,12 @@ def fallback_title(draft: ProductDraft) -> str:
 def product_from_draft(
     draft: ProductDraft,
     *,
-    source_capture_id,
+    source_capture_id: UUID,
     url: str | None = None,
+    product_id: UUID | None = None,
 ) -> ProductSnapshot:
     return ProductSnapshot(
+        id=product_id or provisional_product_id(source_capture_id),
         brand=draft.brand,
         retailer=draft.retailer,
         title=draft.title or fallback_title(draft),

@@ -1,9 +1,11 @@
 from datetime import UTC, datetime
 from enum import StrEnum
+from typing import Literal
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel, Field
 
+from app.domain.common import FitOutcome
 from app.domain.memory.schemas import MemoryContextFact
 
 
@@ -16,12 +18,34 @@ class MemoryDraftKind(StrEnum):
     uncertainty = "uncertainty"
 
 
+class ConversationRole(StrEnum):
+    user = "user"
+    assistant = "assistant"
+
+
+class ConversationTurn(BaseModel):
+    role: ConversationRole
+    content: str = Field(min_length=1, max_length=2400)
+
+
+class OutcomeDraft(BaseModel):
+    purchased_size: str | None = None
+    outcome: FitOutcome = FitOutcome.unknown
+    fit_rating: int | None = Field(default=None, ge=1, le=5)
+    comfort_rating: int | None = Field(default=None, ge=1, le=5)
+    silhouette_rating: int | None = Field(default=None, ge=1, le=5)
+    fit_notes: str
+    confidence: float = Field(default=0.7, ge=0, le=1)
+
+
 class AskFitRequest(BaseModel):
     user_id: UUID
     question: str = Field(min_length=1, max_length=1200)
     product_id: UUID | None = None
     capture_id: UUID | None = None
     context_notes: str | None = Field(default=None, max_length=2000)
+    conversation: list[ConversationTurn] = Field(default_factory=list, max_length=12)
+    session_id: str | None = Field(default=None, min_length=1, max_length=120)
     top_k: int = Field(default=8, ge=1, le=20)
 
 
@@ -49,6 +73,8 @@ class AskFitResponse(BaseModel):
     evidence: list[AskEvidence] = Field(default_factory=list)
     recalled_facts: list[MemoryContextFact] = Field(default_factory=list)
     memory_drafts: list[MemoryDraft] = Field(default_factory=list)
+    outcome_draft: OutcomeDraft | None = None
+    reasoning_status: Literal["grounded", "fallback"] = "fallback"
 
 
 def utc_now() -> datetime:

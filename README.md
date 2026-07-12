@@ -25,12 +25,13 @@ future fit questions.
 
 ## What Works
 
-- Ask-first chat flow grounded in private Cognee recall.
+- Ask-first chat flow grounded in private Cognee recall, current profile data, and confirmed outcomes.
+- Structured OpenRouter synthesis with evidence priority, uncertainty rules, and conversation context.
 - Mobile-friendly capture with camera/gallery uploads.
 - OpenRouter text and vision extraction into reviewable product drafts.
 - Confirmed product snapshots with image evidence.
 - Conversation-to-memory approval with product linking.
-- Purchase outcome tracking for kept, returned, exchanged, and altered items.
+- Purchase outcome tracking for kept, returned, exchanged, and wishlist items.
 - Saved memory, product, capture, profile, and privacy CRUD APIs.
 - Local Cognee mode plus Cognee Cloud provider support.
 - Mizaaj Atlas: Cognee Cloud public fit intelligence seeded from source-labeled product pages and
@@ -50,6 +51,7 @@ The backend keeps the important memory boundaries separate:
 ```text
 raw evidence -> extracted drafts -> confirmed product snapshots
              -> saved chat memories -> purchase outcomes -> Cognee recall
+             -> grounded answer -> user-approved memory or outcome
 ```
 
 Provider boundaries are intentionally explicit:
@@ -57,6 +59,7 @@ Provider boundaries are intentionally explicit:
 - `MemoryGateway`: Cognee local or Cognee Cloud.
 - `AtlasGateway`: local seed fallback or Cognee Cloud public Atlas recall.
 - `ExtractionGateway`: OpenRouter structured text/vision extraction.
+- `ReasoningGateway`: strict-schema answer synthesis over source-labeled evidence.
 - `UploadGateway`: S3-compatible storage such as MinIO, S3, or R2.
 - `MizaajStore`: Postgres persistence with an in-memory test adapter.
 
@@ -108,7 +111,7 @@ OPENROUTER_API_KEY=
 MEMORY_PROVIDER=cognee_cloud
 ATLAS_PROVIDER=cognee_cloud
 ATLAS_DATASET_NAME=mizaaj_atlas_seed_v2
-COGNEE_DATASET_PREFIX=mizaaj_user
+COGNEE_DATASET_PREFIX=mizaaj_private
 COGNEE_CLOUD_BASE_URL=
 COGNEE_CLOUD_API_KEY=
 ```

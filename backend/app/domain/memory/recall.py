@@ -17,6 +17,13 @@ def clean_recall_text(value: str) -> str:
     text = (
         value.replace("\\n", " ").replace("\\'", "'").replace('\\"', '"').replace("**", "").strip()
     )
+    node_contents = re.findall(
+        r"__node_content_start__\s*(.*?)\s*__node_content_end__",
+        text,
+        flags=re.I | re.S,
+    )
+    if node_contents:
+        text = " ".join(dict.fromkeys(item.strip() for item in node_contents if item.strip()))
     text = re.split(r"\bEvidence:\s*", text, maxsplit=1, flags=re.I)[0]
     text = _extract_chunk_text(text) or text
     text = re.sub(r"\b(?:document|data_id|chunk_id)\s*:?\s*[0-9a-f-]{24,}\b", "", text, flags=re.I)
@@ -26,7 +33,7 @@ def clean_recall_text(value: str) -> str:
 
 def _recall_text(item: Any) -> str:
     if isinstance(item, Mapping):
-        for key in ("answer", "text", "value", "content"):
+        for key in ("context", "answer", "text", "value", "content"):
             value = item.get(key)
             if isinstance(value, str) and value.strip():
                 return value

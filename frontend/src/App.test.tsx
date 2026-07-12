@@ -171,6 +171,7 @@ const askResponse = {
       tags: ["signal:user_note"],
     },
   ],
+  reasoning_status: "grounded" as const,
 }
 
 const savedMemoryRecord = {
@@ -215,7 +216,7 @@ describe("Mizaaj app", () => {
       atlas_dataset_name: "mizaaj_atlas_seed_v2",
       upload_provider: "s3",
       extraction_provider: "openrouter",
-      cognee_dataset_prefix: "mizaaj_user",
+      cognee_dataset_prefix: "mizaaj_private",
       cognee_cloud_configured: false,
       cognee_timeout_seconds: 90,
       cloud_usage: null,
@@ -227,6 +228,17 @@ describe("Mizaaj app", () => {
     apiMocks.listSavedMemories.mockResolvedValue([])
     apiMocks.getCapture.mockResolvedValue(extractedCapture)
     apiMocks.createCapture.mockResolvedValue(extractedCapture)
+    apiMocks.createPurchase.mockResolvedValue({
+      id: "77777777-7777-4777-8777-777777777777",
+      user_id: sampleProfile.user_id,
+      product_id: sampleProduct.id,
+      purchased_size: "M",
+      outcome: "kept",
+      fit_rating: 5,
+      comfort_rating: 4,
+      silhouette_rating: 4,
+      fit_notes: "Relaxed shoulders without chest cling.",
+    })
     apiMocks.askMizaaj.mockResolvedValue(askResponse)
     apiMocks.rememberMemoryDrafts.mockResolvedValue({
       user_id: sampleProfile.user_id,
@@ -288,6 +300,70 @@ describe("Mizaaj app", () => {
     expect(screen.getByRole("button", { name: /open user profile/i })).toBeInTheDocument()
   })
 
+  it("sends recent conversation turns for grounded follow-up questions", async () => {
+    render(<App />)
+
+    await waitFor(() => expect(apiMocks.getProfile).toHaveBeenCalledTimes(1))
+    await userEvent.type(screen.getByLabelText(/ask mizaaj/i), "What size should I buy?")
+    await userEvent.click(screen.getByRole("button", { name: /send question to mizaaj/i }))
+    await screen.findByText(/start with m/i)
+
+    await userEvent.type(screen.getByLabelText(/ask mizaaj/i), "What about the sleeves?")
+    await userEvent.click(screen.getByRole("button", { name: /send question to mizaaj/i }))
+
+    await waitFor(() => expect(apiMocks.askMizaaj).toHaveBeenCalledTimes(2))
+    expect(apiMocks.askMizaaj.mock.calls[1][0]).toEqual(
+      expect.objectContaining({
+        question: "What about the sleeves?",
+        conversation: [
+          expect.objectContaining({ role: "user", content: "What size should I buy?" }),
+          expect.objectContaining({ role: "assistant", content: askResponse.answer }),
+        ],
+        session_id: expect.any(String),
+      }),
+    )
+  })
+
+  it("saves an approved structured outcome with chat memory", async () => {
+    apiMocks.askMizaaj.mockResolvedValue({
+      ...askResponse,
+      question: "I kept M and the shoulders felt relaxed.",
+      outcome_draft: {
+        purchased_size: "M",
+        outcome: "kept",
+        fit_rating: 5,
+        comfort_rating: 4,
+        silhouette_rating: 4,
+        fit_notes: "Relaxed shoulders without chest cling.",
+        confidence: 0.9,
+      },
+    })
+    render(<App />)
+
+    await waitFor(() => expect(apiMocks.getProfile).toHaveBeenCalledTimes(1))
+    await userEvent.type(
+      screen.getByLabelText(/ask mizaaj/i),
+      "I kept M and the shoulders felt relaxed.",
+    )
+    await userEvent.click(screen.getByRole("button", { name: /send question to mizaaj/i }))
+    await userEvent.click(await screen.findByRole("button", { name: /remember this/i }))
+    await userEvent.click(screen.getByRole("combobox", { name: /product identity/i }))
+    await userEvent.click(
+      await screen.findByRole("option", { name: /zara - linen blend relaxed shirt/i }),
+    )
+    await userEvent.click(screen.getByRole("button", { name: /save memory and outcome/i }))
+
+    await waitFor(() => expect(apiMocks.createPurchase).toHaveBeenCalledTimes(1))
+    expect(apiMocks.createPurchase).toHaveBeenCalledWith(
+      expect.objectContaining({
+        product_id: sampleProduct.id,
+        purchased_size: "M",
+        outcome: "kept",
+        fit_notes: "Relaxed shoulders without chest cling.",
+      }),
+    )
+  })
+
   it("keeps the Memory page focused on approved memories", async () => {
     apiMocks.listProducts.mockResolvedValue([])
     apiMocks.listSavedMemories.mockResolvedValue([savedMemoryWithCapture])
@@ -317,6 +393,30 @@ describe("Mizaaj app", () => {
     await userEvent.click(screen.getByRole("button", { name: /back to memory/i }))
     expect(window.location.hash).toBe("#memory")
     expect(screen.queryByText("Evidence timeline")).not.toBeInTheDocument()
+  })
+
+  it("starts a grounded conversation from a saved product", async () => {
+    render(<App />)
+
+    await waitFor(() => expect(apiMocks.getProfile).toHaveBeenCalledTimes(1))
+    await navigateViaSidebar(/^memory$/i)
+    await userEvent.click(
+      await screen.findByRole("button", {
+        name: /open zara - linen blend relaxed shirt memory/i,
+      }),
+    )
+    await userEvent.click(screen.getByRole("button", { name: /ask about this/i }))
+
+    expect(await screen.findByText(/using saved product: zara/i)).toBeInTheDocument()
+    await userEvent.type(screen.getByLabelText(/ask mizaaj/i), "What worked last time?")
+    await userEvent.click(screen.getByRole("button", { name: /send question to mizaaj/i }))
+
+    expect(apiMocks.askMizaaj).toHaveBeenCalledWith(
+      expect.objectContaining({
+        product_id: sampleProduct.id,
+        question: "What worked last time?",
+      }),
+    )
   })
 
   it("requires extraction before asking with attached item photos", async () => {

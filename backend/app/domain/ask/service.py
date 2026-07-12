@@ -1,3 +1,5 @@
+import asyncio
+import logging
 import re
 from uuid import UUID
 
@@ -16,6 +18,7 @@ from app.domain.atlas.gateway import AtlasGateway
 from app.domain.atlas.schemas import AtlasContext, AtlasRecallRequest
 from app.domain.common import FitOutcome
 from app.domain.memory.gateway import MemoryGateway
+from app.domain.memory.identity import canonicalize_memory_draft, memory_draft_text
 from app.domain.memory.rebuilder import PrivateMemoryRebuilder
 from app.domain.memory.recall import clean_recall_text
 from app.domain.memory.schemas import FitMemoryEntry, MemoryContext, RecallFitContextRequest
@@ -23,7 +26,11 @@ from app.domain.products.identity import display_name, product_from_draft
 from app.domain.products.schemas import ProductSnapshot
 from app.domain.profiles.schemas import FitProfile
 from app.domain.purchases.schemas import PurchaseRecord
+from app.domain.reasoning.gateway import ReasoningGateway
+from app.domain.reasoning.schemas import GroundedReasoningRequest, GroundedReasoningResult
 from app.storage.store import MizaajStore
+
+logger = logging.getLogger(__name__)
 
 
 class AskFitService:
@@ -32,53 +39,87 @@ class AskFitService:
         store: MizaajStore,
         memory_gateway: MemoryGateway,
         atlas_gateway: AtlasGateway | None = None,
+        reasoning_gateway: ReasoningGateway | None = None,
     ):
         self.store = store
         self.memory_gateway = memory_gateway
         self.atlas_gateway = atlas_gateway
+        self.reasoning_gateway = reasoning_gateway
 
     async def ask(self, request: AskFitRequest) -> AskFitResponse:
         profile = self.store.get_profile(request.user_id)
         product = self._product(request)
         self._assert_product_access(request.user_id, product)
         purchases = self.store.list_purchases(request.user_id)
-        recalled = await self._recall(request, product)
-        atlas = await self._recall_atlas(request, product)
+        recalled, atlas = await asyncio.gather(
+            self._recall(request, product),
+            self._recall_atlas(request, product),
+        )
+        atlas = self._relevant_atlas(atlas, product)
         related_purchases = self._related_purchases(purchases, product)
         evidence = self._evidence(profile, product, related_purchases, recalled, atlas)
-        answer = self._answer(request, profile, product, related_purchases, recalled, atlas)
-        drafts = self._drafts(request, profile, product, related_purchases, recalled)
-
-        return AskFitResponse(
-            user_id=request.user_id,
-            question=request.question,
-            answer=answer,
-            confidence=self._confidence(
+        reasoning = await self._reason(
+            request,
+            profile,
+            product,
+            related_purchases,
+            evidence,
+        )
+        answer = (
+            reasoning.answer
+            if reasoning
+            else self._answer(request, profile, product, related_purchases, recalled, atlas)
+        )
+        drafts = (
+            reasoning.memory_drafts
+            if reasoning
+            else self._drafts(request, profile, product, related_purchases, recalled)
+        )
+        confidence = (
+            self._bounded_reasoning_confidence(reasoning, product, related_purchases, evidence)
+            if reasoning
+            else self._confidence(
                 product,
                 related_purchases,
                 recalled,
                 has_profile_signal=bool(self._profile_signal(profile)),
                 has_atlas_signal=bool(atlas.facts),
-            ),
+            )
+        )
+        if reasoning and reasoning.used_evidence_sources:
+            evidence = self._prioritize_evidence(evidence, reasoning.used_evidence_sources)
+
+        return AskFitResponse(
+            user_id=request.user_id,
+            question=request.question,
+            answer=answer,
+            confidence=confidence,
             evidence=evidence,
             recalled_facts=recalled.facts,
             memory_drafts=drafts,
+            outcome_draft=(
+                reasoning.outcome_draft
+                if reasoning and self._has_user_outcome_signal(request)
+                else None
+            ),
+            reasoning_status="grounded" if reasoning else "fallback",
         )
 
     async def remember_drafts(
         self, request: RememberMemoryDraftsRequest
     ) -> RememberMemoryDraftsResponse:
         product_id = await self._memory_product_id(request)
+        drafts = [canonicalize_memory_draft(draft, product_id) for draft in request.drafts]
         remembered: list[MemoryDraft] = []
         memory_error: str | None = None
         memory_status = "indexed"
         try:
-            for draft in request.drafts:
+            for draft in drafts:
                 await self.memory_gateway.remember_private(
                     request.user_id,
                     FitMemoryEntry(
                         subject=draft.subject,
-                        text=draft.text,
+                        text=memory_draft_text(draft),
                         tags=[
                             "source:ask",
                             f"kind:{draft.kind.value}",
@@ -143,6 +184,10 @@ class AskFitService:
             raise ForbiddenError("Capture does not belong to the current user")
         if capture.product_snapshot is not None:
             return capture.product_snapshot
+        if capture.linked_product_id is not None:
+            product = self.store.get_product(capture.linked_product_id)
+            self._assert_product_access(request.user_id, product)
+            return product
 
         return product_from_draft(
             capture.product_draft,
@@ -174,6 +219,11 @@ class AskFitService:
     async def _memory_product_id(self, request: RememberMemoryDraftsRequest) -> UUID | None:
         self._assert_references_access(request.user_id, request.product_id, request.capture_id)
         if request.product_id is not None:
+            if request.capture_id is not None:
+                capture = self.store.get_capture(request.capture_id)
+                self.store.save_capture(
+                    capture.model_copy(update={"linked_product_id": request.product_id})
+                )
             return request.product_id
         if request.capture_id is None:
             return None
@@ -181,6 +231,8 @@ class AskFitService:
         capture = self.store.get_capture(request.capture_id)
         if capture.product_snapshot is not None:
             return capture.product_snapshot.id
+        if capture.linked_product_id is not None:
+            return capture.linked_product_id
 
         product = product_from_draft(
             capture.product_draft,
@@ -228,7 +280,12 @@ class AskFitService:
         query = self._recall_query(request, product)
         try:
             return await self.memory_gateway.recall_private(
-                RecallFitContextRequest(user_id=request.user_id, query=query, top_k=request.top_k)
+                RecallFitContextRequest(
+                    user_id=request.user_id,
+                    query=query,
+                    top_k=request.top_k,
+                    session_id=request.session_id,
+                )
             )
         except Exception as exc:
             return MemoryContext.degraded(
@@ -274,6 +331,9 @@ class AskFitService:
             for part in [
                 request.question,
                 request.context_notes or "",
+                " ".join(
+                    turn.content for turn in request.conversation[-4:] if turn.role.value == "user"
+                ),
                 *product_terms,
                 (
                     "fit size comfort silhouette returned kept tight loose shoulders chest "
@@ -340,18 +400,100 @@ class AskFitService:
         if product is None:
             return purchases[:4]
 
-        related = []
+        exact: list[PurchaseRecord] = []
+        related: list[PurchaseRecord] = []
         for purchase in purchases:
             try:
                 purchased_product = self.store.get_product(purchase.product_id)
             except Exception:
                 continue
-            if (
-                purchased_product.brand == product.brand
-                and purchased_product.category == product.category
-            ):
+            if purchased_product.id == product.id:
+                exact.append(purchase)
+            elif (purchased_product.brand or "").casefold() == (
+                product.brand or ""
+            ).casefold() and purchased_product.category == product.category:
                 related.append(purchase)
-        return related
+        return [*exact, *related]
+
+    async def _reason(
+        self,
+        request: AskFitRequest,
+        profile: FitProfile,
+        product: ProductSnapshot | None,
+        purchases: list[PurchaseRecord],
+        evidence: list[AskEvidence],
+    ) -> GroundedReasoningResult | None:
+        if self.reasoning_gateway is None:
+            return None
+        try:
+            return await self.reasoning_gateway.synthesize(
+                GroundedReasoningRequest(
+                    user_id=request.user_id,
+                    question=request.question,
+                    context_notes=request.context_notes,
+                    conversation=request.conversation,
+                    profile=profile,
+                    product=product,
+                    purchases=purchases,
+                    evidence=evidence,
+                )
+            )
+        except Exception as exc:
+            logger.warning("Grounded reasoning failed; using deterministic fallback", exc_info=exc)
+            return None
+
+    def _bounded_reasoning_confidence(
+        self,
+        reasoning: GroundedReasoningResult,
+        product: ProductSnapshot | None,
+        purchases: list[PurchaseRecord],
+        evidence: list[AskEvidence],
+    ) -> float:
+        confidence = reasoning.confidence
+        if not evidence:
+            return min(confidence, 0.25)
+        if product is None:
+            return min(confidence, 0.68)
+        has_size_basis = bool(
+            purchases
+            or product.size_chart
+            or any(
+                "size" in item.detail.lower() for item in evidence if item.label != "Current item"
+            )
+        )
+        return min(confidence, 0.58) if not has_size_basis else confidence
+
+    def _prioritize_evidence(
+        self, evidence: list[AskEvidence], used_sources: list[str]
+    ) -> list[AskEvidence]:
+        order = {source: index for index, source in enumerate(used_sources)}
+        return sorted(evidence, key=lambda item: order.get(item.source, len(order)))
+
+    def _relevant_atlas(self, atlas: AtlasContext, product: ProductSnapshot | None) -> AtlasContext:
+        if product is None or not atlas.facts:
+            return atlas
+        brand = (product.brand or "").strip().casefold()
+        identifiers = {
+            value.casefold()
+            for value in [
+                product.sku,
+                product.url,
+                *(item.value for item in product.product_identifiers),
+            ]
+            if value and value.strip()
+        }
+
+        def relevance(fact) -> tuple[int, float]:
+            text = fact.text.casefold()
+            exact = sum(identifier in text for identifier in identifiers)
+            brand_match = bool(brand and brand in text)
+            if brand and not brand_match and not exact:
+                return (-1, fact.score or 0)
+            return (exact * 2 + int(brand_match), fact.score or 0)
+
+        ranked = sorted(atlas.facts, key=relevance, reverse=True)
+        relevant = [fact for fact in ranked if relevance(fact)[0] >= 0]
+        return atlas.model_copy(update={"facts": relevant})
 
     def _evidence(
         self,
@@ -370,12 +512,13 @@ class AskFitService:
             )
 
         for purchase in purchases[:3]:
+            ratings = self._purchase_ratings(purchase)
             evidence.append(
                 AskEvidence(
                     label="Saved outcome",
                     detail=(
-                        f"Size {purchase.purchased_size} was {purchase.outcome.value}; "
-                        f"fit {purchase.fit_rating}/5, comfort {purchase.comfort_rating}/5. "
+                        f"Size {purchase.purchased_size} was {purchase.outcome.value}. "
+                        f"{f'{ratings}. ' if ratings else ''}"
                         f"{purchase.fit_notes or 'No fit note saved.'}"
                     ),
                     source=f"purchase:{purchase.id}",
@@ -429,6 +572,17 @@ class AskFitService:
             for fact in atlas.facts[:3]
         )
         return evidence
+
+    def _purchase_ratings(self, purchase: PurchaseRecord) -> str:
+        return ", ".join(
+            f"{label} {value}/5"
+            for label, value in [
+                ("fit", purchase.fit_rating),
+                ("comfort", purchase.comfort_rating),
+                ("silhouette", purchase.silhouette_rating),
+            ]
+            if value is not None
+        )
 
     def _answer(
         self,
@@ -591,17 +745,12 @@ class AskFitService:
                 MemoryDraft(
                     kind=MemoryDraftKind.fit_preference,
                     subject=f"user:{request.user_id}:taste",
-                    text=(
-                        "User prefers relaxed, non-clingy black T-shirts that do not feel tight "
-                        "around the stomach or chest, keep the chest area visually clean, and use "
-                        "small tasteful artwork rather than loud large prints."
-                    ),
-                    confidence=0.82,
+                    text=f"User-authored fit and taste note: {note}",
+                    confidence=0.76,
                     tags=[
                         f"user:{request.user_id}",
                         f"category:{product.category.value}",
                         "signal:taste",
-                        "fit:relaxed",
                     ],
                 )
             )
@@ -836,6 +985,22 @@ class AskFitService:
         if text.strip().startswith(question_starters) and "i kept" not in text:
             return False
         return any(signal in text for signal in note_signals)
+
+    def _has_user_outcome_signal(self, request: AskFitRequest) -> bool:
+        user_text = " ".join(
+            [
+                request.question,
+                request.context_notes or "",
+                *(turn.content for turn in request.conversation if turn.role.value == "user"),
+            ]
+        ).lower()
+        return bool(
+            re.search(
+                r"\bi(?:'ve| have)?\s+(?:bought|tried|worn|wore|kept|returned|"
+                r"exchanged|altered)\b",
+                user_text,
+            )
+        )
 
     def _mentions_kept(self, question: str) -> bool:
         text = question.lower()

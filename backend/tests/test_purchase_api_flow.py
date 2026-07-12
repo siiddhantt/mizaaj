@@ -1,10 +1,49 @@
+from uuid import UUID
+
 from fastapi.testclient import TestClient
 
 from app.core.dependencies import get_memory_gateway, get_store
+from app.domain.captures.schemas import CaptureResponse
 from app.domain.common import FitOutcome
+from app.domain.products.schemas import ProductDraft, ProductSnapshot
 from app.main import create_app
 from app.storage.in_memory import LOCAL_USER_ID, InMemoryStore
 from tests.stubs import StubMemoryGateway
+
+OTHER_USER_ID = UUID("00000000-0000-4000-8000-000000000002")
+
+
+def test_purchase_rejects_product_owned_by_another_user():
+    get_store.cache_clear()
+    get_memory_gateway.cache_clear()
+    app = create_app()
+    store = InMemoryStore()
+    memory = StubMemoryGateway()
+    capture = store.save_capture(
+        CaptureResponse(
+            user_id=OTHER_USER_ID,
+            source_type="manual",
+            product_draft=ProductDraft(title="Private product"),
+        )
+    )
+    product = store.save_product(
+        ProductSnapshot(title="Private product", source_capture_id=capture.id)
+    )
+    app.dependency_overrides[get_store] = lambda: store
+    app.dependency_overrides[get_memory_gateway] = lambda: memory
+    client = TestClient(app)
+
+    response = client.post(
+        "/api/v1/purchases",
+        json={
+            "user_id": str(LOCAL_USER_ID),
+            "product_id": str(product.id),
+            "purchased_size": "M",
+            "outcome": "kept",
+        },
+    )
+
+    assert response.status_code == 403
 
 
 def test_purchase_api_crud_rebuilds_private_memory():

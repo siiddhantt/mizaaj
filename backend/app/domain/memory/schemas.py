@@ -95,12 +95,21 @@ class FitMemoryEntry(BaseModel):
 
     @classmethod
     def from_purchase(cls, purchase: PurchaseRecord, product: ProductSnapshot) -> "FitMemoryEntry":
+        ratings = ", ".join(
+            f"{label} {value}/5"
+            for label, value in [
+                ("fit", purchase.fit_rating),
+                ("comfort", purchase.comfort_rating),
+                ("silhouette", purchase.silhouette_rating),
+            ]
+            if value is not None
+        )
         return cls(
             subject=f"purchase:{purchase.id}",
             text=(
                 f"User bought {product.title} by {product.brand or 'unknown brand'} "
                 f"in size {purchase.purchased_size}. Outcome: {purchase.outcome.value}. "
-                f"Fit rating {purchase.fit_rating}/5, comfort rating {purchase.comfort_rating}/5. "
+                f"{f'Ratings: {ratings}. ' if ratings else ''}"
                 f"Notes: {purchase.fit_notes or 'none'}."
             ),
             tags=[
@@ -118,6 +127,7 @@ class RecallFitContextRequest(BaseModel):
     user_id: UUID
     query: str
     top_k: int = Field(default=8, ge=1, le=20)
+    session_id: str | None = Field(default=None, min_length=1, max_length=120)
 
 
 class MemoryContextFact(BaseModel):

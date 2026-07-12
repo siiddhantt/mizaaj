@@ -1,3 +1,4 @@
+import re
 from uuid import UUID, uuid4
 
 import httpx
@@ -26,7 +27,8 @@ class CogneeCloudMemoryGateway(MemoryGateway):
         self.transport = transport
 
     async def remember_private(self, user_id: UUID, entry: FitMemoryEntry) -> None:
-        filename = f"{entry.source_id or entry.subject}.txt".replace("/", "_")
+        source = re.sub(r"[^A-Za-z0-9._-]+", "_", entry.source_id or entry.subject).strip("._-")
+        filename = f"{source}-{uuid4().hex}.txt"
         content, content_type = self._remember_multipart_body(user_id, entry, filename)
         await self._request(
             "POST",
@@ -36,16 +38,25 @@ class CogneeCloudMemoryGateway(MemoryGateway):
         )
 
     async def recall_private(self, query: RecallFitContextRequest) -> MemoryContext:
+        request_payload = {
+            "searchType": "GRAPH_COMPLETION",
+            "query": query.query,
+            "datasets": [self._dataset_name(query.user_id)],
+            "topK": query.top_k,
+            "includeReferences": True,
+            "onlyContext": True,
+            "systemPrompt": (
+                "Return only concise, directly relevant private clothing facts. Preserve product "
+                "identity, size system, outcome, body-area fit, fabric feel, and whether the fact "
+                "was observed or preferred. Do not invent or generalize beyond memory."
+            ),
+        }
+        if query.session_id:
+            request_payload["sessionId"] = query.session_id
         payload = await self._request(
             "POST",
             "/api/v1/recall",
-            json={
-                "searchType": "GRAPH_COMPLETION",
-                "query": query.query,
-                "datasets": [self._dataset_name(query.user_id)],
-                "topK": query.top_k,
-                "includeReferences": True,
-            },
+            json=request_payload,
         )
         raw_results = payload if isinstance(payload, list) else payload.get("results", [])
         return MemoryContext(
@@ -59,11 +70,36 @@ class CogneeCloudMemoryGateway(MemoryGateway):
     async def forget_private(self, user_id: UUID, scope: ForgetScope) -> None:
         if scope != ForgetScope.all_private:
             raise NotImplementedError("Granular Cognee Cloud forgetting is not wired yet")
-        await self._request(
-            "POST",
-            "/api/v1/forget",
-            json={"dataset": self._dataset_name(user_id), "everything": False, "memoryOnly": True},
-        )
+        dataset_name = self._dataset_name(user_id)
+        dataset_id = await self._dataset_id(dataset_name)
+        if dataset_id is None:
+            return
+        payload = await self._request("GET", f"/api/v1/datasets/{dataset_id}/data")
+        data_items = payload if isinstance(payload, list) else payload.get("data", [])
+        for item in data_items:
+            if not isinstance(item, dict) or not item.get("id"):
+                continue
+            data_id = str(item["id"])
+            try:
+                await self._request(
+                    "DELETE",
+                    f"/api/v1/datasets/{dataset_id}/data/{data_id}",
+                )
+            except httpx.HTTPStatusError:
+                await self._request(
+                    "POST",
+                    "/api/v1/forget",
+                    json={"dataset": dataset_name, "data_id": data_id},
+                )
+
+    async def _dataset_id(self, dataset_name: str) -> str | None:
+        payload = await self._request("GET", "/api/v1/datasets/")
+        datasets = payload if isinstance(payload, list) else payload.get("datasets", [])
+        for dataset in datasets:
+            if isinstance(dataset, dict) and dataset.get("name") == dataset_name:
+                value = dataset.get("id")
+                return str(value) if value else None
+        return None
 
     async def _request(
         self,
@@ -83,7 +119,7 @@ class CogneeCloudMemoryGateway(MemoryGateway):
         ) as client:
             response = await client.request(method, path, json=json, content=content)
             response.raise_for_status()
-            return response.json()
+            return response.json() if response.content else {}
 
     def _headers(self) -> dict[str, str]:
         api_key = self.settings.cognee_cloud_api_key or ""

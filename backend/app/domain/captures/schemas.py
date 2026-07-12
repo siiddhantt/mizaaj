@@ -2,7 +2,7 @@ from uuid import UUID, uuid4
 
 from pydantic import BaseModel, Field
 
-from app.domain.common import CaptureSourceType, ClaimStatus
+from app.domain.common import CaptureSourceType, ClaimStatus, ClothingCategory
 from app.domain.products.schemas import ProductDraft, ProductSnapshot
 
 
@@ -32,6 +32,7 @@ class CaptureResponse(BaseModel):
     user_notes: str | None = None
     product_draft: ProductDraft
     product_snapshot: ProductSnapshot | None = None
+    linked_product_id: UUID | None = None
     confirmed: bool = False
     memory_status: str = "not_indexed"
     memory_error: str | None = None
@@ -47,4 +48,32 @@ class ConfirmCaptureRequest(BaseModel):
             for claim in self.product_draft.extracted_claims
             if claim.id in self.accepted_claim_ids
         }
-        return self.product_draft.model_copy(update={"extracted_claims": list(accepted.values())})
+        rejected_predicates = {
+            claim.predicate.strip().lower()
+            for claim in self.product_draft.extracted_claims
+            if claim.id not in self.accepted_claim_ids
+        }
+        field_updates = {
+            field: value
+            for predicate, (field, value) in _REJECTED_CLAIM_FIELDS.items()
+            if predicate in rejected_predicates
+        }
+        return self.product_draft.model_copy(
+            update={**field_updates, "extracted_claims": list(accepted.values())}
+        )
+
+
+_REJECTED_CLAIM_FIELDS = {
+    "category": ("category", ClothingCategory.unknown),
+    "material": ("material", None),
+    "available_sizes": ("size_options", []),
+    "regional_size_labels": ("size_labels", []),
+    "size_chart": ("size_chart", []),
+    "fit": ("fit_descriptors", []),
+    "fabric_composition": ("fabric_composition", []),
+    "care": ("care_instructions", []),
+    "origin_country": ("origin_country", None),
+    "gender": ("gender", None),
+    "product_identifiers": ("product_identifiers", []),
+    "color": ("color", None),
+}

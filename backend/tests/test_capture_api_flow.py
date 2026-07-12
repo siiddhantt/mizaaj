@@ -3,9 +3,48 @@ from uuid import UUID
 from fastapi.testclient import TestClient
 
 from app.core.dependencies import get_extraction_gateway, get_memory_gateway, get_store
+from app.domain.captures.schemas import ConfirmCaptureRequest
+from app.domain.claims import ExtractedClaim
+from app.domain.common import ClothingCategory
+from app.domain.products.schemas import ProductDraft
 from app.main import create_app
 from app.storage.in_memory import LOCAL_USER_ID, InMemoryStore
 from tests.stubs import FailingMemoryGateway, StubExtractionGateway, StubMemoryGateway
+
+
+def test_rejected_claims_are_removed_from_confirmed_product_fields():
+    material = ExtractedClaim(
+        subject="tee",
+        predicate="material",
+        value="polyester",
+        source="image",
+        confidence=0.8,
+    )
+    color = ExtractedClaim(
+        subject="tee",
+        predicate="color",
+        value="black",
+        source="image",
+        confidence=0.8,
+    )
+    payload = ConfirmCaptureRequest(
+        product_draft=ProductDraft(
+            title="Tee",
+            category=ClothingCategory.tshirt,
+            material="polyester",
+            color="black",
+            extracted_claims=[material, color],
+        ),
+        accepted_claim_ids=[color.id],
+    )
+
+    accepted = payload.accepted_draft()
+
+    assert accepted.material is None
+    assert accepted.color == "black"
+    assert len(accepted.extracted_claims) == 1
+    assert accepted.extracted_claims[0].id == color.id
+    assert accepted.extracted_claims[0].status.value == "user_confirmed"
 
 
 def test_confirmed_capture_is_recallable_and_forgettable():

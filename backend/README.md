@@ -39,6 +39,8 @@ running capture extraction or memory flows that need those providers.
 - `ATLAS_PROVIDER=seed`: recalls curated public Atlas records from `backend/data` as an offline fallback.
 - `UPLOAD_PROVIDER=s3`: returns presigned PUT URLs for AWS S3, MinIO, R2, or compatible storage.
 - `EXTRACTION_PROVIDER=openrouter`: extracts reviewable product drafts with OpenRouter.
+- OpenRouter also synthesizes grounded answers with strict JSON output after private and Atlas
+  recall complete in parallel.
 
 Local Cognee memory uses `OPENROUTER_API_KEY` for Cognee's LLM path unless `COGNEE_LLM_API_KEY`
 is set. It uses `fastembed` by default for local embeddings so memory writes do not require a
@@ -52,6 +54,11 @@ For OpenRouter extraction, fill `OPENROUTER_API_KEY` and keep separate text and 
 
 The extractor only writes reviewable drafts. Confirmed memories are still created later in the
 capture confirmation flow.
+
+Ask responses follow a fixed evidence order: exact confirmed outcomes, comparable outcomes,
+current profile and private memory, current product evidence, then source-labeled Atlas context.
+Cognee recall uses context-only graph completion; it supplies durable memory while the reasoning
+gateway owns the final answer and structured memory/outcome proposals.
 
 ## Mizaaj Atlas
 

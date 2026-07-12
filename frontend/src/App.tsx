@@ -24,6 +24,7 @@ import { type ChangeEvent, lazy, type ReactNode, Suspense, useEffect, useMemo, u
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { CategoryPreferences } from "@/components/category-preferences"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
@@ -198,6 +199,7 @@ export function App({
   const [askingMizaaj, setAskingMizaaj] = useState(false)
   const [memorySheetOpen, setMemorySheetOpen] = useState(false)
   const [rememberingDrafts, setRememberingDrafts] = useState(false)
+  const [includeOutcomeDraft, setIncludeOutcomeDraft] = useState(false)
   const [deletingMemoryId, setDeletingMemoryId] = useState<string | null>(null)
   const [clearingMemories, setClearingMemories] = useState(false)
   const [selectedDraftIds, setSelectedDraftIds] = useState<Set<string>>(new Set())
@@ -213,6 +215,7 @@ export function App({
   const [purchaseOutcome, setPurchaseOutcome] = useState<FitOutcome>("kept")
   const [purchaseNotes, setPurchaseNotes] = useState("")
   const previewUrls = useRef<Set<string>>(new Set())
+  const chatSessionId = useRef(createAttachmentId())
   const notifications = useNotifications()
 
   const captureAssets = useMemo(
@@ -548,9 +551,11 @@ export function App({
         const response = await api.askMizaaj({
           user_id: appUserId,
           question: trimmedQuestion,
-          product_id: latestCapture?.product_snapshot?.id,
+          product_id: latestCapture?.product_snapshot?.id || selectedProductId || undefined,
           capture_id: latestCapture?.id,
           context_notes: askContext.trim() || undefined,
+          conversation: chatMessages.slice(-10).map(({ role, content }) => ({ role, content })),
+          session_id: chatSessionId.current,
         })
         setAskResponse(response)
         setChatMessages((current) => [
@@ -579,8 +584,9 @@ export function App({
     if (!askResponse) return
 
     const drafts = askResponse.memory_drafts.filter((draft) => selectedDraftIds.has(draft.id))
-    if (!drafts.length) {
-      setStatus("Choose at least one memory card to save.")
+    const shouldSaveOutcome = includeOutcomeDraft && Boolean(askResponse.outcome_draft)
+    if (!drafts.length && !shouldSaveOutcome) {
+      setStatus("Choose a memory card or outcome to save.")
       return
     }
 
@@ -588,20 +594,39 @@ export function App({
     setStatus("Saving selected memory with Cognee...")
     try {
       await withStatus(async () => {
-        const response = await api.rememberMemoryDrafts({
-          user_id: appUserId,
-          drafts,
-          question: askResponse.question,
-          answer: askResponse.answer,
-          product_id: memoryProductId || latestCapture?.product_snapshot?.id,
-          capture_id: latestCapture?.id,
-          evidence: askResponse.evidence,
-          recalled_facts: askResponse.recalled_facts,
-        })
-        if (response.memory_record) {
+        const requestedProductId = memoryProductId || latestCapture?.product_snapshot?.id
+        const response = drafts.length
+          ? await api.rememberMemoryDrafts({
+              user_id: appUserId,
+              drafts,
+              question: askResponse.question,
+              answer: askResponse.answer,
+              product_id: requestedProductId,
+              capture_id: latestCapture?.id,
+              evidence: askResponse.evidence,
+              recalled_facts: askResponse.recalled_facts,
+            })
+          : null
+        if (response?.memory_record) {
           setSavedMemories((current) => [response.memory_record as SavedMemoryRecord, ...current])
         }
-        if (response.memory_record?.product_id) {
+        const outcomeProductId =
+          response?.memory_record?.product_id || requestedProductId || latestCapture?.linked_product_id
+        if (shouldSaveOutcome && outcomeProductId && askResponse.outcome_draft) {
+          const draft = askResponse.outcome_draft
+          const purchase = await api.createPurchase({
+            user_id: appUserId,
+            product_id: outcomeProductId,
+            purchased_size: purchaseSize.trim() || draft.purchased_size || "unknown",
+            outcome: purchaseOutcome,
+            fit_rating: draft.fit_rating,
+            comfort_rating: draft.comfort_rating,
+            silhouette_rating: draft.silhouette_rating,
+            fit_notes: purchaseNotes.trim() || draft.fit_notes,
+          })
+          setPurchases((current) => [purchase, ...current])
+        }
+        if (response?.memory_record?.product_id) {
           const refreshedProducts = await api.listProducts()
           setProducts(refreshedProducts)
           if (latestCapture) {
@@ -613,11 +638,19 @@ export function App({
           }
         }
         setMemorySheetOpen(false)
-        setStatus(response.memory_status === "indexed" ? "Memory saved" : "Memory save failed")
-        if (response.memory_status === "indexed") {
-          notifications.success("Memory saved", "This answer can now be recalled by Mizaaj.")
+        setIncludeOutcomeDraft(false)
+        const memoryFailed = response?.memory_status === "failed"
+        setStatus(memoryFailed ? "Memory save failed" : "Memory saved")
+        if (!memoryFailed) {
+          notifications.success(
+            shouldSaveOutcome ? "Memory and outcome saved" : "Memory saved",
+            "Future answers can now use this experience.",
+          )
         } else {
-          notifications.error("Memory save failed", response.memory_error ?? "The record is saved, but indexing failed.")
+          notifications.error(
+            "Memory save failed",
+            response?.memory_error ?? "The record is saved, but indexing failed.",
+          )
         }
       })
     } finally {
@@ -669,6 +702,16 @@ export function App({
     setAskResponse(response)
     setMemoryProductId(latestCapture?.product_snapshot?.id || "")
     setSelectedDraftIds(new Set(response.memory_drafts.map((draft) => draft.id)))
+    setIncludeOutcomeDraft(Boolean(response.outcome_draft))
+    if (response.outcome_draft) {
+      setPurchaseSize(response.outcome_draft.purchased_size ?? "")
+      setPurchaseOutcome(
+        outcomeOptions.includes(response.outcome_draft.outcome)
+          ? response.outcome_draft.outcome
+          : "kept",
+      )
+      setPurchaseNotes(response.outcome_draft.fit_notes)
+    }
     setMemorySheetOpen(true)
   }
 
@@ -681,15 +724,16 @@ export function App({
         product_id: outcomeProductId,
         purchased_size: purchaseSize,
         outcome: purchaseOutcome,
-        fit_rating: purchaseOutcome === "kept" ? 4 : 2,
-        comfort_rating: 4,
-        silhouette_rating: 4,
+        fit_rating: askResponse?.outcome_draft?.fit_rating,
+        comfort_rating: askResponse?.outcome_draft?.comfort_rating,
+        silhouette_rating: askResponse?.outcome_draft?.silhouette_rating,
         fit_notes: purchaseNotes,
       })
       setPurchases((current) => [purchase, ...current])
       setActiveView("memory")
       setActiveMemoryProductKey("")
       setStatus("Outcome remembered")
+      setIncludeOutcomeDraft(false)
       notifications.success("Try-on outcome remembered", "Future answers can use this fit signal.")
     })
   }
@@ -719,6 +763,19 @@ export function App({
     if (view !== "memory") setActiveMemoryProductKey("")
     if (view === "memory") setActiveMemoryProductKey("")
     setNavigationOpen(false)
+  }
+
+  function startProductConversation(product: ProductSnapshot) {
+    clearCaptureAttachments()
+    setSelectedProductId(product.id)
+    setMemoryProductId(product.id)
+    setAskResponse(null)
+    setChatMessages([])
+    setAskQuestion("")
+    chatSessionId.current = createAttachmentId()
+    setActiveMemoryProductKey("")
+    setActiveView("ask")
+    setStatus(`Using saved product: ${productDisplayName(product)}`)
   }
 
   return (
@@ -802,6 +859,8 @@ export function App({
             {activeView === "ask" ? (
               <AskView
                 products={products}
+                activeSavedProduct={products.find((product) => product.id === selectedProductId)}
+                clearActiveSavedProduct={() => setSelectedProductId("")}
                 memoryProductId={memoryProductId}
                 setMemoryProductId={setMemoryProductId}
                 setSelectedProductId={setSelectedProductId}
@@ -818,6 +877,8 @@ export function App({
                 toggleDraft={toggleMemoryDraft}
                 rememberDrafts={rememberAskDrafts}
                 rememberingDrafts={rememberingDrafts}
+                includeOutcomeDraft={includeOutcomeDraft}
+                setIncludeOutcomeDraft={setIncludeOutcomeDraft}
                 captureAttachments={captureAttachments}
                 uploadedCount={captureAssets.length}
                 uploadingCount={uploadingAttachmentCount}
@@ -896,6 +957,7 @@ export function App({
                 clearingMemories={clearingMemories}
                 onDeleteMemory={(memoryId) => void deleteSavedMemory(memoryId)}
                 onClearMemories={() => void clearSavedMemories()}
+                onAskProduct={startProductConversation}
               />
             ) : null}
           </section>
@@ -974,6 +1036,8 @@ function BrandMark() {
 
 function AskView({
   products,
+  activeSavedProduct,
+  clearActiveSavedProduct,
   memoryProductId,
   setMemoryProductId,
   setSelectedProductId,
@@ -990,6 +1054,8 @@ function AskView({
   toggleDraft,
   rememberDrafts,
   rememberingDrafts,
+  includeOutcomeDraft,
+  setIncludeOutcomeDraft,
   captureAttachments,
   uploadedCount,
   uploadingCount,
@@ -1012,6 +1078,8 @@ function AskView({
   onCapture,
 }: {
   products: ProductSnapshot[]
+  activeSavedProduct?: ProductSnapshot
+  clearActiveSavedProduct: () => void
   memoryProductId: string
   setMemoryProductId: (value: string) => void
   setSelectedProductId: (value: string) => void
@@ -1028,6 +1096,8 @@ function AskView({
   toggleDraft: (id: string) => void
   rememberDrafts: () => Promise<void>
   rememberingDrafts: boolean
+  includeOutcomeDraft: boolean
+  setIncludeOutcomeDraft: (value: boolean) => void
   captureAttachments: CaptureAttachment[]
   uploadedCount: number
   uploadingCount: number
@@ -1051,6 +1121,7 @@ function AskView({
 }) {
   const messagesEndRef = useRef<HTMLDivElement | null>(null)
   const composerRef = useRef<HTMLTextAreaElement | null>(null)
+  const [outcomeDetailsOpen, setOutcomeDetailsOpen] = useState(false)
   const prompts = [
     "Should I size up?",
     "Will this match my taste?",
@@ -1083,6 +1154,10 @@ function AskView({
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView?.({ block: "end", behavior: "smooth" })
   }, [messages.length, asking])
+
+  useEffect(() => {
+    setOutcomeDetailsOpen(Boolean(response?.outcome_draft))
+  }, [response])
 
   return (
     <div className="mx-auto w-full max-w-6xl">
@@ -1142,7 +1217,7 @@ function AskView({
               </Button>
             </div>
           </div>
-          {showAttachmentStatus || latestCapture ? (
+          {showAttachmentStatus || latestCapture || activeSavedProduct ? (
             <div className="mt-2 flex min-w-0 flex-wrap items-center gap-2 text-xs text-muted-foreground sm:mt-4">
               {showAttachmentStatus ? (
                 <span className="glass-chip max-w-full truncate rounded-full px-3 py-1.5">{attachmentStatus}</span>
@@ -1162,6 +1237,21 @@ function AskView({
               {latestCapture && !latestCapture.confirmed ? (
                 <span className="glass-chip max-w-full truncate rounded-full px-3 py-1.5 text-icy">
                   Temporary item context
+                </span>
+              ) : null}
+              {activeSavedProduct && !latestCapture ? (
+                <span className="glass-chip inline-flex max-w-full items-center gap-2 rounded-full py-1 pl-3 pr-1.5 text-icy">
+                  <span className="truncate">
+                    Using saved product: {productDisplayName(activeSavedProduct)}
+                  </span>
+                  <button
+                    type="button"
+                    className="grid size-6 shrink-0 place-items-center rounded-full hover:bg-background/50"
+                    aria-label="Clear saved product context"
+                    onClick={clearActiveSavedProduct}
+                  >
+                    <X className="size-3.5" />
+                  </button>
                 </span>
               ) : null}
             </div>
@@ -1325,12 +1415,36 @@ function AskView({
                     />
                   ))}
                 </div>
-                <details className="group rounded-2xl border border-border/55 bg-background/35 p-3">
+                <details
+                  className="group rounded-2xl border border-border/55 bg-background/35 p-3"
+                  open={outcomeDetailsOpen}
+                  onToggle={(event) => setOutcomeDetailsOpen(event.currentTarget.open)}
+                >
                   <summary className="flex cursor-pointer list-none items-center justify-between text-sm font-medium">
-                    Also save try-on outcome
+                    {response.outcome_draft ? "Suggested try-on outcome" : "Also save try-on outcome"}
                     <ChevronDown className="size-4 transition-transform group-open:rotate-180" />
                   </summary>
                   <div className="mt-4 space-y-3">
+                    {response.outcome_draft ? (
+                      <button
+                        type="button"
+                        className={cn(
+                          "flex w-full items-center gap-3 rounded-2xl border p-3 text-left text-sm transition",
+                          includeOutcomeDraft
+                            ? "border-primary/45 bg-primary/10"
+                            : "border-border/55 bg-background/35",
+                        )}
+                        onClick={() => setIncludeOutcomeDraft(!includeOutcomeDraft)}
+                      >
+                        <Checkbox checked={includeOutcomeDraft} />
+                        <span>
+                          Save this structured outcome with the selected memory
+                          <span className="mt-1 block text-xs text-muted-foreground">
+                            Review the size, result, and notes below first.
+                          </span>
+                        </span>
+                      </button>
+                    ) : null}
                     <Input
                       value={purchaseSize}
                       placeholder="Size"
@@ -1374,10 +1488,18 @@ function AskView({
             <Button
               className="w-full rounded-2xl"
               onClick={rememberDrafts}
-              disabled={!response || rememberingDrafts || selectedDraftCount === 0}
+              disabled={
+                !response ||
+                rememberingDrafts ||
+                (selectedDraftCount === 0 && !(includeOutcomeDraft && response.outcome_draft))
+              }
             >
               <MemoryStick />
-              {rememberingDrafts ? "Saving memory..." : "Save selected memory"}
+              {rememberingDrafts
+                ? "Saving memory..."
+                : includeOutcomeDraft && response?.outcome_draft
+                  ? "Save memory and outcome"
+                  : "Save selected memory"}
             </Button>
           </SheetFooter>
         </SheetContent>
@@ -1811,6 +1933,8 @@ function ProfileView({
               Saved context is indexed into private memory and used as a guardrail for future fit answers.
             </p>
           </div>
+
+          <CategoryPreferences profile={profile} setProfile={setProfile} />
         </section>
 
         <aside className="space-y-4">
@@ -2264,6 +2388,7 @@ function MemoryView({
   clearingMemories,
   onDeleteMemory,
   onClearMemories,
+  onAskProduct,
 }: {
   purchases: PurchaseRecord[]
   products: ProductSnapshot[]
@@ -2276,6 +2401,7 @@ function MemoryView({
   clearingMemories: boolean
   onDeleteMemory: (memoryId: string) => void
   onClearMemories: () => void
+  onAskProduct: (product: ProductSnapshot) => void
 }) {
   const productsByCapture = new Map(
     products
@@ -2330,6 +2456,7 @@ function MemoryView({
         deletingMemoryId={deletingMemoryId}
         onDeleteMemory={onDeleteMemory}
         onBack={onBackToMemory}
+        onAskProduct={onAskProduct}
       />
     ) : (
       <div className="mx-auto max-w-5xl space-y-5">
@@ -2511,12 +2638,14 @@ function ProductMemoryDetail({
   deletingMemoryId,
   onDeleteMemory,
   onBack,
+  onAskProduct,
 }: {
   item: MemoryProductItem
   memoryCaptures: Record<string, CaptureResponse>
   deletingMemoryId: string | null
   onDeleteMemory: (memoryId: string) => void
   onBack: () => void
+  onAskProduct: (product: ProductSnapshot) => void
 }) {
   const { product, sourceCapture, linkedMemories, purchases } = item
   const linkedCaptures = uniqueCaptures([
@@ -2541,6 +2670,10 @@ function ProductMemoryDetail({
         >
           <ArrowLeft className="size-4" />
           Memory
+        </Button>
+        <Button className="rounded-full" onClick={() => onAskProduct(product)}>
+          <Sparkles className="size-4" />
+          Ask about this
         </Button>
       </div>
 

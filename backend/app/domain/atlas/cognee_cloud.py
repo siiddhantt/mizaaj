@@ -28,6 +28,13 @@ class CogneeCloudAtlasGateway(AtlasGateway):
                 "datasets": [self.settings.atlas_dataset_name],
                 "topK": request.top_k,
                 "includeReferences": True,
+                "onlyContext": True,
+                "systemPrompt": (
+                    "Return only source-backed public clothing facts relevant to the exact brand, "
+                    "product identifiers, category, and region in the query. Exclude unrelated "
+                    "brands and products. Preserve source URLs, identifiers, size labels, and "
+                    "measurements. Never state a personal preference or outcome."
+                ),
             },
         )
         raw_results = payload if isinstance(payload, list) else payload.get("results", [])
