@@ -33,7 +33,9 @@ class CogneeCloudAtlasGateway(AtlasGateway):
                     "Return only source-backed public clothing facts relevant to the exact brand, "
                     "product identifiers, category, and region in the query. Exclude unrelated "
                     "brands and products. Preserve source URLs, identifiers, size labels, and "
-                    "measurements. Never state a personal preference or outcome."
+                    "measurements. When no exact SKU, URL, or product identifier matches, describe "
+                    "results as separate same-brand references rather than facts about the queried "
+                    "item. Never state a personal preference or outcome."
                 ),
             },
         )

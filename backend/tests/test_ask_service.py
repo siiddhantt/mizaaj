@@ -147,6 +147,11 @@ async def test_ask_labels_atlas_separately_from_private_memory():
     assert "Private memory" in labels
     assert "Mizaaj Atlas" in labels
     assert any(item.source.startswith("mizaaj_atlas") for item in response.evidence)
+    assert any(
+        item.detail.startswith("Same-brand Atlas reference, not the exact product")
+        for item in response.evidence
+        if item.label == "Mizaaj Atlas"
+    )
     assert "Public Atlas evidence adds" in response.answer
     assert atlas.queries
 

@@ -493,7 +493,26 @@ class AskFitService:
 
         ranked = sorted(atlas.facts, key=relevance, reverse=True)
         relevant = [fact for fact in ranked if relevance(fact)[0] >= 0]
-        return atlas.model_copy(update={"facts": relevant})
+        labeled = []
+        for fact in relevant:
+            text = fact.text.casefold()
+            exact = bool(identifiers and any(identifier in text for identifier in identifiers))
+            if exact:
+                labeled.append(fact)
+                continue
+            scope = "Same-brand" if brand and brand in text else "Category"
+            labeled.append(
+                fact.model_copy(
+                    update={
+                        "text": (
+                            f"{scope} Atlas reference, not the exact product. "
+                            "Do not transfer product-specific material or measurements: "
+                            f"{fact.text}"
+                        )
+                    }
+                )
+            )
+        return atlas.model_copy(update={"facts": labeled})
 
     def _evidence(
         self,
